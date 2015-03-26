@@ -10,27 +10,119 @@ GLint sobelHeight = 3;
 GLubyte* image[4];
 GLuint texture[4];
 
-GLdouble sobel[3][3] = { {-0.125, 0.0 , 0.125}
-						,{-0.25, 0.0 ,0.25} 
-						,{-0.125 ,0.0, 0.125}  } ;
+int kernel_x [3][3] =
+{   {-1 , 0 , 1},
+    {-2 , 0 , 2},
+    {-1 , 0 , 1}
+};
 
+int kernel_y [3][3] =
+{   {-1 , -2 , -1},
+    {0 , 0 , 0},
+    {1 , 2 , 1}
+};
 
-GLubyte test[3][3] = {{1, 2, 3},
-					  {4, 5, 6} ,
-					  {7, 8, 9}};
 using namespace std;
 int getImage(char* fileName);
 
+void treshHold(GLubyte *given,  GLint size, GLubyte tresh )
+{
+	for (int i = 0; i < size; i ++ )
+	{
+			given[i]  = (GLubyte)255 * (tresh <= given[i] );
+		
+	}
+
+}
+
+GLubyte* dithering(GLubyte *given,  GLint height, GLint width)
+{
+	GLubyte *returned = (GLubyte *) malloc(width*height); 
+	float *tmp1;
+	int colorNum=16;
+	int sum;
+	tmp1	=	new float[height * width];
+	
+	memset(tmp1,0,sizeof(float)* height * width);
+	for(int cols = 0;cols < width;cols++)
+	{
+		for(int rows = 0; rows<height; rows++)
+		{
+			sum=0;
+			tmp1[cols + rows * width] += given[cols + rows*width];
+
+			while(tmp1[cols + rows * width]>=256/colorNum && sum<255)
+			{
+				sum+=256/colorNum;
+				tmp1[cols + rows*width] -= 256/colorNum;
+			}
+
+			if(sum<255)
+				returned[cols + rows*width]=sum;
+			else returned[cols + rows*width]=240;
+		
+			if(cols + rows*width+1	<	width * height)
+				tmp1[cols + rows*width + 1]+=tmp1[cols + rows * width]*7.0/16.0;
+			if(rows < height-1)
+			{
+				if(cols < width-1)
+					tmp1[cols + (1 + rows) * width+1]+=tmp1[cols + rows * width]*1/16.0;
+	
+				tmp1[cols + (1 + rows)*width]+=tmp1[cols + rows * width]*5.0/16.0;
+				tmp1[cols + (1 + rows) * width-1] += tmp1[cols + rows * width]*3.0/16.0;
+			}
+		}
+	}
+
+	
+	delete tmp1;
+	delete given;
+	return returned;
+}
+
+GLubyte * halftone(GLubyte *given,  GLint height, GLint width)
+{
+	
+
+	GLubyte *returned = (GLubyte *) malloc(4*width*height); 
+	memset(returned,255,height*width*4*sizeof(GLubyte));
 
 
+	for(int cols=0;cols<width;cols++)
+	{
+		
+		for(int rows=0;rows<height;rows++)
+		{
+			int newRows=rows*2;
+			int newCols=cols*2;
+			
+			
+			if(given[cols + rows*width]<=255*8/10.0)
+				returned[newCols + newRows*width]=0;
+						
+			if(given[cols + rows*width]<=255*6/10.0)
+				returned[(newCols+1) + (newRows + 1)*2*width]=0;
+			
+			if(given[cols + rows*width]<=255*4/10.0)
+				returned[(newCols + 1) + (newRows)*2*width]=0;
+
+			if(given[cols + rows*width]<=255*2/10.0)
+				returned[(newCols) + (newRows + 1)*2*width]=0;
+	}
+	}
 
 
-GLubyte* convolution(GLubyte* image, GLint  width,GLint height)
+	delete(given);
+	return returned;
+
+}
+
+GLubyte* sobel(GLubyte* image, GLint  width,GLint height)
 {
 
 	GLubyte* newImage =(GLubyte* ) malloc(width*height);
 	GLint widthRunner, heightRunner, kernelColRunner, kernelRowRunner, tempCol, tempRow;
-	GLdouble acc ;
+	GLdouble accX, accY; ;
 	for (heightRunner = 0; heightRunner < height; heightRunner++)
 		{
 		
@@ -40,7 +132,7 @@ GLubyte* convolution(GLubyte* image, GLint  width,GLint height)
 				
 				/*** kernel **/ 
 				tempRow = heightRunner - sobelHeight/2;
-				acc = 0;
+				accX = 0, accY = 0;
 				for (kernelRowRunner = 0; kernelRowRunner < sobelHeight; kernelRowRunner++,tempRow ++)
 				{
 					tempCol = widthRunner - sobelWidth/2;
@@ -52,14 +144,15 @@ GLubyte* convolution(GLubyte* image, GLint  width,GLint height)
 						 
 							continue;
 						} 
-							acc +=  (image[tempRow*width + tempCol])	*		(sobel[kernelRowRunner][kernelColRunner]);
-						//	printf("row:%d   col: %d     %f  %d \n",tempRow,tempCol, sobel[kernelRowRunner][kernelColRunner], image[tempRow*width + tempCol]);	 
+							accX +=  (image[tempRow*width + tempCol])	*		(kernel_x[kernelRowRunner][kernelColRunner]);
+						accX +=  (image[tempRow*width + tempCol])	*		(kernel_y[kernelRowRunner][kernelColRunner]);
+					
 					}		
 					
 				
 				}
 
-				newImage[heightRunner*width + widthRunner] = acc; 
+				newImage[heightRunner*width + widthRunner] = sqrt(accX*accX + accY*accY); 
 		}
 
 		
@@ -118,6 +211,44 @@ void display()
 		glTexCoord2f(0, 1);//adapt texture to shape
 		glVertex3f(0 , 1.0f,1.0);
 	glEnd();
+
+
+	/* third image */
+	glBindTexture(GL_TEXTURE_2D, texture[2]); //using first texture
+	
+	glBegin(GL_QUADS);
+		glTexCoord2f(0, 0); //adapt texture to shape
+		glVertex3f(-1 ,-1.0 ,1.0);
+		
+		glTexCoord2f(1, 0);  //adapt texture to shape
+		glVertex3f(0.0f ,-1.0f, 1.0);
+		
+		glTexCoord2f(1, 1);//adapt texture to shape
+		glVertex3f(0.0 , 0.0f,1.0);
+		
+		glTexCoord2f(0, 1);//adapt texture to shape
+		glVertex3f(-1 , 0.0f,1.0);
+	glEnd();
+	
+	
+	/* third image */
+	glBindTexture(GL_TEXTURE_2D, texture[3]); //using first texture
+	
+	glBegin(GL_QUADS);
+		glTexCoord2f(0, 0); //adapt texture to shape
+		glVertex3f(0 ,-1.0 ,1.0);
+		
+		glTexCoord2f(1, 0);  //adapt texture to shape
+		glVertex3f(1.0f ,-1.0f, 1.0);
+		
+		glTexCoord2f(1, 1);//adapt texture to shape
+		glVertex3f(1.0 , 0.0f,1.0);
+		
+		glTexCoord2f(0, 1);//adapt texture to shape
+		glVertex3f(0 , 0.0f,1.0);
+	glEnd();
+	
+	
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
 //	glViewport(0,0,256,256); 
@@ -135,8 +266,7 @@ void bla()
 int main(int  argc,  char** argv) 
 {
 
-		int row, col;
-
+	
 
 	 glutInit (& argc, argv) ;
 	  glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB) ;
@@ -184,11 +314,11 @@ int getImage(char* fileName)
 	picSize=(*(int*)(header+2)-54);
 	GLint width=*(int*)(header+18);
 	GLint height=*(int*)(header+22);
-
+	GLuint offsetToPixels = *(uintptr_t*) (header + 10);
 	void* memory = malloc(width*height);
 	
 	image[0]= (GLubyte*) memory;
-	
+	fseek(file, offsetToPixels, SEEK_SET);
 	fread(image[0],1,width*height,file); //read the first image
 
 	int index ;
@@ -229,12 +359,51 @@ int getImage(char* fileName)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	GLubyte* tempImage = convolution(image[1], width,height);
+	
+	GLubyte* tempImage = sobel(image[1], width,height);
 	image[1] = tempImage;
+
+	treshHold(image[1], width * height , 150);
+	//build texture
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,GL_LUMINANCE, GL_UNSIGNED_BYTE, image[1]);
+
+/************ third image ********************/
+	glGenTextures(1, &texture[2]);  //generate place for new texture
+	glBindTexture(GL_TEXTURE_2D, texture[2]); // initialize first texure 
+	
+	//texture properties
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	tempImage = halftone(image[2], width,height);
+	image[2] = tempImage;
 
 
 	//build texture
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,GL_LUMINANCE, GL_UNSIGNED_BYTE, image[1]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width*2, height*2, 0,GL_LUMINANCE, GL_UNSIGNED_BYTE, image[2]);
+
+
+	/************ furth image ********************/
+	glGenTextures(1, &texture[3]);  //generate place for new texture
+	glBindTexture(GL_TEXTURE_2D, texture[3]); // initialize first texure 
+	
+	//texture properties
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	tempImage = dithering(image[3], width,height);
+	image[3] = tempImage;
+
+
+	//build texture
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,GL_LUMINANCE, GL_UNSIGNED_BYTE, tempImage);
+
+
+
 }
 
 	
