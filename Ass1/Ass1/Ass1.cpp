@@ -25,6 +25,14 @@ int kernel_y [3][3] =
 using namespace std;
 int getImage(char* fileName);
 
+
+void writeToFile(GLubyte *given, GLint size,const char* name)
+{
+	FILE *file = fopen(name, "w+");
+	fwrite((void*) given, size, 1, file);
+	fclose(file);
+
+}
 void treshHold(GLubyte *given,  GLint size, GLubyte tresh )
 {
 	for (int i = 0; i < size; i ++ )
@@ -34,6 +42,48 @@ void treshHold(GLubyte *given,  GLint size, GLubyte tresh )
 	}
 
 }
+
+void toCharGray(GLubyte *given,  GLint size, const char* name)
+{
+	FILE *file = fopen(name, "w+");
+	int value;
+	GLubyte* newArr = (GLubyte*) malloc(size*2);
+	for (int i = 0; i < size; i ++ )
+	{
+		value = (given[i])/16;
+
+
+		  fprintf (file, "%d;",value);
+
+		
+	}
+	fclose(file);
+	
+
+}
+
+
+void toCharBw(GLubyte *given,  GLint size, const char* name)
+{
+	FILE *file = fopen(name, "w+");
+	for (int i = 0; i < size; i ++ )
+	{
+		switch(given[i])
+		{
+			case 0:
+				fprintf (file, "0;");
+				break;
+			default:
+				fprintf (file, "1;");
+				break;
+		}
+		
+	}
+	
+fclose(file);
+
+}
+
 
 GLubyte* dithering(GLubyte *given,  GLint height, GLint width)
 {
@@ -364,6 +414,8 @@ int getImage(char* fileName)
 	image[1] = tempImage;
 
 	treshHold(image[1], width * height , 150);
+	toCharBw(image[1], width*height, "img4.txt");
+	
 	//build texture
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,GL_LUMINANCE, GL_UNSIGNED_BYTE, image[1]);
 
@@ -378,9 +430,12 @@ int getImage(char* fileName)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	tempImage = halftone(image[2], width,height);
+
 	image[2] = tempImage;
 
 
+	toCharBw(image[2], width*height, "img5.txt");
+	
 	//build texture
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width*2, height*2, 0,GL_LUMINANCE, GL_UNSIGNED_BYTE, image[2]);
 
@@ -398,6 +453,7 @@ int getImage(char* fileName)
 	tempImage = dithering(image[3], width,height);
 	image[3] = tempImage;
 
+   toCharGray(image[3],width*height, "img6.txt");
 
 	//build texture
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,GL_LUMINANCE, GL_UNSIGNED_BYTE, tempImage);
