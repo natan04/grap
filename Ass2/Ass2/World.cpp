@@ -9,6 +9,14 @@ World::World(void)
 
 World::~World(void)
 {
+	for(std::vector<Shape*>::iterator it = fShapes.begin(); it != fShapes.end(); ++it) {
+		delete *it;
+	}
+	for(std::vector<Light*>::iterator it = fLights.begin(); it != fLights.end(); ++it) {
+		delete *it;
+	}
+	delete fEye;
+
 }
 
 void World::addToWorld(char* lineArg)
@@ -18,13 +26,21 @@ void World::addToWorld(char* lineArg)
 	char* rest = strtok(NULL, "");
 	if (strcmp(name, "light") == 0)
 	{
-		Light* l = new Light(rest);
+		Light* light = new Light(rest);
+		fLights.push_back(light);
 	}
 	else if (strcmp(name, "scene") == 0)
-		std::cout << "scene" << std::endl;
+	{
+		fEye = new Eye(rest);
+	}
 	else if (strcmp(name, "spher") == 0)
-		std::cout << "spher" << std::endl;
+	{
+		Shape* shape = new Spher(rest);
+		fShapes.push_back(shape);
+	}
 	else if (strcmp(name, "plane") == 0)
-		std::cout << "plane" << std::endl;
-
+	{
+		Shape* shape = new Plane(rest);
+		fShapes.push_back(shape);
+	}
 }

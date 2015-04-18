@@ -22,18 +22,13 @@ void readFromFile(char* value, World& world)
 		exit(1); // exit if file not found
  	
 	char buf[MAX_CHARS_PER_LINE];
-
-	const char* rest;
-	const char* name;
-
 	while (fin.getline(buf, MAX_CHARS_PER_LINE))
 	{
 		
 		world.addToWorld(buf);
 		memset(&buf, 0, MAX_CHARS_PER_LINE);
-
-	
 	}
+	fin.close();
 }
 
 int main(int  argc,  char** argv) 

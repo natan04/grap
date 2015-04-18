@@ -7,7 +7,7 @@ Light::Light(char* args)
 {
 	GLfloat t1, t2, t3;
 	char* value;
-
+ 
 	//direction
 	t1 = atof(strtok(args, SEP));
 	t2 = atof(strtok(NULL, SEP));
@@ -20,8 +20,8 @@ Light::Light(char* args)
 	t3 = atof(strtok(NULL, SEP));
 	fIntensity = new Vector3f(t1, t2, t3);
 
+	//spotlight handle;
 	value = strtok(NULL, SEP);
-
 	if (value)
 	{
 		t1 = atof(value);
