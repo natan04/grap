@@ -7,7 +7,7 @@
 #include <fstream>
 #include "World.h"
 
-		
+
 
 using std::ifstream;
 using namespace std;
@@ -24,7 +24,6 @@ void readFromFile(char* value, World& world)
 	char buf[MAX_CHARS_PER_LINE];
 	while (fin.getline(buf, MAX_CHARS_PER_LINE))
 	{
-		
 		world.addToWorld(buf);
 		memset(&buf, 0, MAX_CHARS_PER_LINE);
 	}

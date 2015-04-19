@@ -1,9 +1,5 @@
 #include "World.h"
-#include "Light.h"
-
-
-World::World(void)
-{
+World::World(void){
 }
 
 

@@ -14,6 +14,7 @@ Spher::Spher(char* arg)
 
 	//radius
 	fRadius = atof(strtok(NULL, SEP));
+	fRadiusSquare = pow(fRadius, 2);
 
 	//matirials parameter
 	t1 = atof(strtok(NULL, SEP));
@@ -48,4 +49,26 @@ Spher::~Spher(void)
 	delete fKa;
 	delete fKd;
 	delete fKs;
+}
+
+//assuming getting allocated vector inside will return param.
+GLboolean  Spher::findIntersectionPoint(Vector3f& startPoint, Vector3f& direction, Vector3f& willReturn, Vector3f& normal )
+{
+	Vector3f startPointToCenterOfSphere = *fCenterCoordinate - startPoint;
+	GLfloat lengthProjection = Vector3f::dotProduct(startPointToCenterOfSphere, direction);
+	GLfloat dSquare =  pow(lengthProjection, 2) - pow(lengthProjection, 2);
+
+	if (dSquare > fRadiusSquare)
+		return 0;
+
+	GLfloat Th = sqrt(fRadiusSquare - dSquare);
+	GLfloat t = lengthProjection -Th;
+	if (t <= 0)
+		t = lengthProjection + Th;
+
+	willReturn = startPoint + t*direction;
+	normal = (willReturn -  *fCenterCoordinate);
+	normal.normalize();
+
+	return true;
 }

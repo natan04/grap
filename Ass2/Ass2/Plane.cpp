@@ -1,6 +1,5 @@
 #include "Plane.h"
 
-
 Plane::Plane(char* arg)
 {
 	GLfloat t1, t2, t3;
@@ -54,4 +53,18 @@ Plane::~Plane(void)
 	delete fKa;
 	delete fKd;
 	delete fKs;
+}
+
+GLboolean  Plane::findIntersectionPoint(Vector3f& startPoint, Vector3f& direction, Vector3f& willReturn, Vector3f& normal )
+{
+	GLfloat t = Vector3f::dotProduct(*fNormalToPlane, 
+					/*(Q0 - P0)/N dot V */	(*fCenterToPoint - startPoint)/(Vector3f::dotProduct(*fNormalToPlane, direction))); 
+
+	if (t < 0)
+		return false;
+
+	willReturn = startPoint + t*direction;
+	normal = *fNormalToPlane;
+
+	return true;	
 }

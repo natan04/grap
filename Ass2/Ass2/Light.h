@@ -12,7 +12,7 @@ public:
 	~Light(void);
 
 private:
-	Vector3f* fDirection;
+	Vector3f*	 fDirection;
 	Vector3f* fIntensity; 
 	Vector3f* fSpotlight;
 	GLfloat	  fCutoff;

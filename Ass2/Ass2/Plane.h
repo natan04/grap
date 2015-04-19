@@ -5,12 +5,14 @@
 #include "glut.h"
 #include "Vector3f.h"
 
+
 class Plane :
 	public Shape
 {
 public:
 	Plane(char* arg);
 	~Plane(void);
+	GLboolean  findIntersectionPoint(Vector3f& startPoint, Vector3f& direction, Vector3f& willReturn, Vector3f& normal );
 
 private:
 	Vector3f* fNormalToPlane;

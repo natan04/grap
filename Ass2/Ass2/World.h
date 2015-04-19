@@ -7,12 +7,12 @@
 #include <Windows.h>
 #include <fstream>
 #include <vector>
-
 #include "Light.h"
 #include "Eye.h"
 #include "Shape.h"
 #include "Spher.h"
 #include "Plane.h"
+
 
 #define MAX_CHARS_PER_LINE	200
 #define MAX_TOKENS_PER_LINE 18
@@ -27,7 +27,6 @@ class World
 public:
 	World(void);
 	~World(void);
-
 	void addToWorld(char* lineArg);
 
 private:

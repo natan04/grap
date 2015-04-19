@@ -5,7 +5,6 @@ Eye::Eye(char* args)
 {
 	GLfloat t1, t2, t3;
 
-	char* value;
 
 	//screen coordinate
 	t1 = atof(strtok(args, SEP));
