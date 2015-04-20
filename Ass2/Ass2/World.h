@@ -25,13 +25,18 @@ class World
 
 
 public:
+
+	GLubyte* World::paint();
 	World(void);
 	~World(void);
 	void addToWorld(char* lineArg);
+	GLuint ftexture;
+	Eye* fEye;
 
 private:
 	std::vector<Light*> fLights;
 	std::vector<Shape*> fShapes;
-	Eye* fEye;
+	
+	
 };
 

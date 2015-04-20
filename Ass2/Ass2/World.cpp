@@ -1,5 +1,9 @@
 #include "World.h"
-World::World(void){
+#include "Light.h"
+
+
+World::World(void)
+{
 }
 
 
@@ -14,6 +18,18 @@ World::~World(void)
 	delete fEye;
 
 }
+
+GLubyte* World::paint()
+{
+	GLubyte* screen = (GLubyte*) malloc(sizeof(GLbyte) * (fEye->fRx) * (fEye->fRy)); 
+	memset(screen, 0, (fEye->fRx) * (fEye->fRy));
+	return screen;
+
+}
+
+
+
+
 
 void World::addToWorld(char* lineArg)
 {

@@ -34,6 +34,10 @@ Eye::Eye(char* args)
 
 }
 
+void Eye::init()
+{
+
+}
 
 Eye::~Eye(void)
 {
