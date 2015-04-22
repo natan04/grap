@@ -55,16 +55,16 @@ Plane::~Plane(void)
 	delete fKs;
 }
 
-GLboolean  Plane::findIntersectionPoint(Vector3f& startPoint, Vector3f& direction, Vector3f& willReturn, Vector3f& normal )
+Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 	GLfloat t = Vector3f::dotProduct(*fNormalToPlane, 
-					/*(Q0 - P0)/N dot V */	(*fCenterToPoint - startPoint)/(Vector3f::dotProduct(*fNormalToPlane, direction))); 
+					/*(Q0 - P0)/N dot V */	(*fCenterToPoint - ray.startLocation)/(Vector3f::dotProduct(*fNormalToPlane, ray.direction))); 
 
 	if (t < 0)
-		return false;
+		return NULL;
 
-	willReturn = startPoint + t*direction;
+	willReturn = ray.startLocation + t*ray.startLocation;
 	normal = *fNormalToPlane;
 
-	return true;	
+	return this;	
 }

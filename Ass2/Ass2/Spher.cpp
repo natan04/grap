@@ -52,23 +52,25 @@ Spher::~Spher(void)
 }
 
 //assuming getting allocated vector inside will return param.
-GLboolean  Spher::findIntersectionPoint(Vector3f& startPoint, Vector3f& direction, Vector3f& willReturn, Vector3f& normal )
+Shape*  Spher::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
-	Vector3f startPointToCenterOfSphere = *fCenterCoordinate - startPoint;
-	GLfloat lengthProjection = Vector3f::dotProduct(startPointToCenterOfSphere, direction);
-	GLfloat dSquare =  pow(lengthProjection, 2) - pow(lengthProjection, 2);
-
+	Vector3f startPointToCenterOfSphere = *fCenterCoordinate - ray.startLocation ;
+	GLfloat v = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
+	GLfloat lengthProjection = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
+	GLfloat dSquare =  startPointToCenterOfSphere.getSquaredLength() - pow(lengthProjection, 2);
+	
+	
 	if (dSquare > fRadiusSquare)
-		return 0;
+		return NULL;
 
 	GLfloat Th = sqrt(fRadiusSquare - dSquare);
 	GLfloat t = lengthProjection -Th;
 	if (t <= 0)
 		t = lengthProjection + Th;
 
-	willReturn = startPoint + t*direction;
+	willReturn = ray.startLocation + t*ray.direction;
 	normal = (willReturn -  *fCenterCoordinate);
 	normal.normalize();
 
-	return true;
+	return this;
 }

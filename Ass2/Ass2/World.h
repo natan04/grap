@@ -30,10 +30,14 @@ public:
 	World(void);
 	~World(void);
 	void addToWorld(char* lineArg);
+	GLboolean intersact(Ray& ray);
 	GLuint ftexture;
 	Eye* fEye;
-
+	Vector3f	powerVector(Vector3f& vector, unsigned int pow);
+	
 private:
+	Shape* World::FindIntersection(Ray ray,Vector3f& intersectionPoint, Vector3f &normal);
+	Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,  Shape &shape);
 	std::vector<Light*> fLights;
 	std::vector<Shape*> fShapes;
 	

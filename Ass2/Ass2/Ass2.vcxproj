@@ -65,6 +65,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Structs.h" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="Shape.h" />
     <ClInclude Include="Light.h" />
