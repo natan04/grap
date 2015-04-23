@@ -33,7 +33,7 @@ GLubyte* World::paint()
 			Vector3f intersection, normal;
 			if (shape = FindIntersection(ray, intersection, normal))
 			{
-				screen[(xAxis + yAxis*fEye->fRy)] = getColor(ray, intersection, normal, *shape);
+				screen[(xAxis + yAxis*fEye->fRy)] = getColor(ray, intersection, normal, *shape, 0);
 			}
 			else
 			{
@@ -46,8 +46,9 @@ GLubyte* World::paint()
 	
 }
 
-Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,  Shape &shape)
+Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,  Shape &shape, GLuint level)
 {
+	
 	ray.direction.normalize();
 	Color color;
 	color.x = color.y = color.z = 0;
@@ -57,20 +58,50 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 	for(std::vector<Light*>::iterator it = fLights.begin(); it != fLights.end(); ++it)
 	{
 		if (Light* light =  (*it)->findIntersection(intersection, fShapes))
-			color += ( 
-						(*shape.fKd) * (Vector3f::dotProduct(normal, (*light->fDirection)* -1)) 
-						+		
-						/*Ks */					(*shape.fKs) *  
-						/* R vector:: */		pow((Vector3f::dotProduct
-													((*light->fDirection) -2*(normal *  (Vector3f::dotProduct(*light->fDirection, normal))),
-													/* normlized vector */  ray.direction)),shape.fShininess)
-						)*
-						*light->fIntensity;
-
+		{
+			Color diffuse, specular;
+			diffuse *=0; specular*=0;
+			Vector3f NormalToLight = (*light->fDirection)* -1; //we need to oposite direction
+			NormalToLight.normalize();
+				
+			diffuse  = (*shape.fKd) * (Vector3f::dotProduct(normal, NormalToLight));
+			specular = handleSpecular(normal, *light->fDirection, ray.direction, shape.fShininess)*(*shape.fKs);
+			color += (diffuse + specular) * *light->fIntensity;
+		}
 	}
-
+	if (MAX_LEVEL == level)
+		return color;
+	Color reflective;
+	Shape *newShape;
+	Vector3f normalNew, newIntersection;
+	Ray out = generateRayReflecttion(normal, ray);
+	newShape = FindIntersection(out, newIntersection, normalNew);
+	if (!(newShape)) 
+		return color;
+	reflective = *shape.fKs * getColor(out, newIntersection, normalNew, *newShape, level + 1);
+	color +=reflective;
 	return color;
 }
+
+//ray is coming inside
+Ray World::generateRayReflecttion(Vector3f normal, Ray ray)
+{
+	Ray rayOut;
+	Vector3f reflective =  (ray.direction - 2*normal*(Vector3f::dotProduct(normal, ray.direction)));
+	rayOut.direction = reflective;
+	rayOut.startLocation = ray.startLocation;
+
+	return rayOut;
+}
+//the direction of l is to us.
+GLfloat World::handleSpecular(Vector3f normal, Vector3f l, Vector3f v, GLfloat shininess)
+{
+		Vector3f reflective =  (l - 2*normal*(Vector3f::dotProduct(normal, l)));
+		reflective.normalize(); 
+		GLfloat vDotR  = Vector3f::dotProduct(reflective, v);
+		return pow(vDotR, shininess);
+}
+
 
 Vector3f	powerVector(Vector3f& vector, unsigned int power)
 {
@@ -80,6 +111,8 @@ Vector3f	powerVector(Vector3f& vector, unsigned int power)
 	vec.z = pow(vector.x, power);
 	return vec;
 }
+
+
 
 Shape* World::FindIntersection(Ray ray,Vector3f& aIntersectionPoint, Vector3f &aNormal)
 {

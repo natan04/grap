@@ -60,7 +60,7 @@ Shape*  Spher::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 	GLfloat dSquare =  startPointToCenterOfSphere.getSquaredLength() - pow(lengthProjection, 2);
 	
 	
-	if (dSquare > fRadiusSquare)
+	if (v < 0 || dSquare > fRadiusSquare)
 		return NULL;
 
 	GLfloat Th = sqrt(fRadiusSquare - dSquare);
