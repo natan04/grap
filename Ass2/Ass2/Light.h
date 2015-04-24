@@ -7,6 +7,7 @@
 #include "Structs.h"
 #include <stdlib.h>
 #include <vector>
+#define RAD2DEG(x) (x / M_PI * 180)
 class Light
 {
 public:

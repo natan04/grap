@@ -12,8 +12,11 @@ class Shape
 		Shape(){}
 		virtual ~Shape(){}
 		virtual Shape* findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal ) = 0;
-		Vector3f* fKa;
-		Vector3f* fKd;
+		virtual Color getAmbient(Point intersection) = 0;
+		Color* fKa;
+		Color* fKd;
 		GLfloat fShininess;
-		Vector3f* fKs;
+		Color* fKs;
+		Color* fKr;
+		GLboolean fMirror;
 };

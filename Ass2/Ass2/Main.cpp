@@ -35,7 +35,7 @@ void display()
 {
 
 		
-	glDrawPixels(512,512, GL_BGR_EXT , GL_FLOAT, picture);
+	glDrawPixels( world.WIDTH, world.HEIGHT, GL_RGB , GL_FLOAT, picture);
 	
 	glFlush();
 
@@ -55,14 +55,15 @@ int main(int  argc,  char** argv)
 
 
 	glutInit (& argc, argv) ;
-	
-	 glutCreateWindow("First example") ;
-	
-	   glutInitWindowSize ( 512,512) ;
-   glutInitDisplayMode ( GLUT_RGB) ;
 
-	
 	picture = world.paint();
+	
+
+	glutInitWindowSize ( world.WIDTH, world.HEIGHT) ;
+
+	glutInitDisplayMode ( GLUT_RGB) ;
+		
+	 glutCreateWindow("Example") ;
 
 	glutDisplayFunc(display); 
      glutMainLoop();

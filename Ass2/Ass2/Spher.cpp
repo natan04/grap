@@ -34,14 +34,32 @@ Spher::Spher(char* arg)
 
 	fShininess =  atof(strtok(NULL, " "));
 	fMirror = 0;
+	fKr = NULL;
 	value = strtok(NULL, "");
 	if (value)
 	{
 		if (strcmp(value,"M") == 0)
+		{
 			fMirror = 1; 
+			*fKa *= 0;
+			*fKd *=0;
+			*fKs *=0;
+			fKr = new Vector3f(1,1,1);
+		}
+		else
+		{
+			value = strtok(value, " ");
+			if (strcmp(value,"R") == 0)
+			{	
+				t1 = atof(strtok(NULL, SEP));
+				t2 = atof(strtok(NULL, SEP));
+				t3 = atof(strtok(NULL, SEP));
+				fKr = new Vector3f(t1,t2,t3);
+			}
+		}
+
 	}
 }
-
 
 Spher::~Spher(void)
 {
@@ -55,12 +73,14 @@ Spher::~Spher(void)
 Shape*  Spher::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 	Vector3f startPointToCenterOfSphere = *fCenterCoordinate - ray.startLocation ;
+	ray.direction.normalize();
 	GLfloat v = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
 	GLfloat lengthProjection = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
 	GLfloat dSquare =  startPointToCenterOfSphere.getSquaredLength() - pow(lengthProjection, 2);
+
 	
 	
-	if (v < 0 || dSquare > fRadiusSquare)
+	if (v < 0 || dSquare > fRadiusSquare || dSquare < -0.00001  /*floating point loss of significent.*/)
 		return NULL;
 
 	GLfloat Th = sqrt(fRadiusSquare - dSquare);
@@ -73,4 +93,9 @@ Shape*  Spher::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 	normal.normalize();
 
 	return this;
+}
+
+Color Spher::getAmbient(Point intersection) 
+{
+	return *fKa;
 }

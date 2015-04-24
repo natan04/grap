@@ -13,13 +13,14 @@ public:
 	Spher(char* arg);
 	~Spher(void);
 	Shape*  findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal );
+	Color getAmbient(Point intersection) ;
 private:
 	Vector3f* fCenterCoordinate;
 
 	GLfloat fRadius;
 	GLfloat fRadiusSquare;
-
-	GLboolean fMirror;
+	
+	
 
 };
 

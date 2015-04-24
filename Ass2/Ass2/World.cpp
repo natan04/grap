@@ -21,19 +21,23 @@ World::~World(void)
 
 GLubyte* World::paint()
 {
-	Color* screen = (Color*) malloc(sizeof(Vector3f) * (fEye->fRx) * (fEye->fRy)); 
+
+	WIDTH = fEye->fRx;
+	HEIGHT = fEye->fRy;
+	Color* screen = (Color*) malloc(sizeof(Color) * (HEIGHT * WIDTH)); 
 	
-	
-	for (GLuint xAxis = 0; xAxis < fEye->fRx; xAxis ++)
+
+	for (GLuint xAxis =0; xAxis < WIDTH; xAxis ++)
 	{
-		for (GLuint yAxis = 0; yAxis < fEye->fRy; yAxis++)
+		for (GLuint yAxis = 000; yAxis < HEIGHT; yAxis++)
 		{
+			
 			Ray ray = fEye->generateRay(xAxis, yAxis);
 			Shape* shape;
 			Vector3f intersection, normal;
 			if (shape = FindIntersection(ray, intersection, normal))
 			{
-				screen[(xAxis + yAxis*fEye->fRy)] = getColor(ray, intersection, normal, *shape, 0);
+				screen[(xAxis + yAxis*WIDTH)] = sanity(getColor(ray, intersection, normal, *shape, 0));
 			}
 			else
 			{
@@ -46,6 +50,51 @@ GLubyte* World::paint()
 	
 }
 
+/*
+GLubyte* World::paintFish()
+{
+
+	WIDTH = fEye->fRx;
+	HEIGHT = fEye->fRy;
+	Color* screen = (Color*) malloc(sizeof(Color) * (HEIGHT * WIDTH)); 
+	
+
+	for (GLuint xAxis =0; xAxis < WIDTH; xAxis ++)
+	{
+		for (GLuint yAxis = 0; yAxis < HEIGHT; yAxis++)
+		{
+			
+			Ray ray = fEye->generateFishRay(xAxis, yAxis);
+			Shape* shape;
+			Vector3f intersection, normal;
+			if (shape = FindIntersection(ray, intersection, normal))
+			{
+				screen[(xAxis + yAxis*WIDTH)] = sanity(getColor(ray, intersection, normal, *shape, 0));
+			}
+			else
+			{
+				ray = ray;
+			}
+		}
+		
+	}
+	return (GLubyte*) screen;
+	
+}
+*/
+Color World::sanity(Color& color)
+{
+	if (color.x > 1) 
+		color.x = 1;
+	if (color.y > 1)
+		color.y = 1;
+	if (color.z > 1)
+		color.z = 1;
+
+	return color;
+}
+
+
 Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,  Shape &shape, GLuint level)
 {
 	
@@ -53,12 +102,13 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 	Color color;
 	color.x = color.y = color.z = 0;
 	
-	color+= (*shape.fKa) * (*fEye->fAmbientLighting) + (*fEye->fAmbientLighting);
+	color+= (shape.getAmbient(intersection)) * (*fEye->fAmbientLighting) ;
 	
 	for(std::vector<Light*>::iterator it = fLights.begin(); it != fLights.end(); ++it)
 	{
 		if (Light* light =  (*it)->findIntersection(intersection, fShapes))
 		{
+
 			Color diffuse, specular;
 			diffuse *=0; specular*=0;
 			Vector3f NormalToLight = (*light->fDirection)* -1; //we need to oposite direction
@@ -67,29 +117,30 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 			diffuse  = (*shape.fKd) * (Vector3f::dotProduct(normal, NormalToLight));
 			specular = handleSpecular(normal, *light->fDirection, ray.direction, shape.fShininess)*(*shape.fKs);
 			color += (diffuse + specular) * *light->fIntensity;
+		
 		}
 	}
-	if (MAX_LEVEL == level)
+	if (MAX_LEVEL == level || (!shape.fKr))
 		return color;
 	Color reflective;
 	Shape *newShape;
 	Vector3f normalNew, newIntersection;
-	Ray out = generateRayReflecttion(normal, ray);
+	Ray out = generateRayReflecttion(normal, ray, intersection);
 	newShape = FindIntersection(out, newIntersection, normalNew);
-	if (!(newShape)) 
+	if (!(newShape) ) 
 		return color;
-	reflective = *shape.fKs * getColor(out, newIntersection, normalNew, *newShape, level + 1);
+	reflective = *shape.fKr * getColor(out, newIntersection, normalNew, *newShape, level + 1);
 	color +=reflective;
 	return color;
 }
 
 //ray is coming inside
-Ray World::generateRayReflecttion(Vector3f normal, Ray ray)
+Ray World::generateRayReflecttion(Vector3f normal, Ray ray, Vector3f &intersection)
 {
 	Ray rayOut;
 	Vector3f reflective =  (ray.direction - 2*normal*(Vector3f::dotProduct(normal, ray.direction)));
 	rayOut.direction = reflective;
-	rayOut.startLocation = ray.startLocation;
+	rayOut.startLocation = intersection;
 
 	return rayOut;
 }
@@ -169,7 +220,7 @@ void World::addToWorld(char* lineArg)
 	else if (strcmp(name, "plane") == 0)
 	{
 		Shape* shape = new Plane(rest);
-		//fShapes.push_back(shape);
+		fShapes.push_back(shape);
 	}
 }
 

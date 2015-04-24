@@ -19,15 +19,17 @@
 #define MAX_NAME_SIZE		10
 #define DELIMITER			","
 #define SPACE				" "
-#define MAX_LEVEL			4
+#define MAX_LEVEL			10
 
 class World
 {
 
 
 public:
-
+	GLuint WIDTH;
+	GLuint HEIGHT;
 	GLubyte* World::paint();
+	GLubyte* World::paintFish();
 	World(void);
 	~World(void);
 	void addToWorld(char* lineArg);
@@ -38,12 +40,12 @@ public:
 	
 private:
 	GLfloat handleSpecular(Vector3f normal, Vector3f l, Vector3f v, GLfloat shininess);
-	Ray 	generateRayReflecttion(Vector3f normal, Ray ray);
+	Ray World::generateRayReflecttion(Vector3f normal, Ray ray, Vector3f &intersection);
 	Shape* World::FindIntersection(Ray ray,Vector3f& intersectionPoint, Vector3f &normal);
 	Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,  Shape &shape, GLuint level);
 	std::vector<Light*> fLights;
 	std::vector<Shape*> fShapes;
-	
+	Color sanity(Color& color);
 	
 };
 

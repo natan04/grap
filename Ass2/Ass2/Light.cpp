@@ -28,7 +28,7 @@ Light::Light(char* args)
 		t2 = atof(strtok(NULL, SEP));
 		t3 = atof(strtok(NULL, SEP));
 		fSpotlight = new Vector3f(t1, t2, t3);
-		fCutoff = atof(strtok(NULL, SEP));
+		fCutoff = DEG2RAD(atof(strtok(NULL, SEP)));
 
 	}
 	else 
@@ -51,22 +51,37 @@ Light::~Light(void)
 
 Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> & shapes)
 {
-	Vector3f normal;
-	Ray ray;
-	ray.startLocation = intersectionPoint;
-	ray.direction = *fDirection * -1;
-	if ( intersact(ray, shapes))
-		return NULL;
-	else
+	
+	if (fSpotlight)
 	{
-		if (fSpotlight)
+		Ray ray;
+		ray.startLocation = intersectionPoint;
+		ray.direction = *fSpotlight - intersectionPoint;
+	
+		if  ( intersact(ray, shapes))
+			return NULL;
+		else
 		{
-			GLfloat angle = Vector3f::dotProduct(ray.direction, normal)/(ray.direction.getLength()*normal.getLength());
+			GLfloat angle = acos(Vector3f::dotProduct(ray.direction, *fDirection*-1)/(ray.direction.getLength()*fDirection->getLength()));
 			if (angle > fCutoff)
 				return NULL;
-			else return this;
+			else
+				return this;
 		}
-		else return this;
+	}
+	else
+	{
+		Ray ray;
+		//reversing the ray from lighter. and sending it from the intersection point
+		ray.startLocation = intersectionPoint;		
+		ray.direction = *fDirection * -1;
+		if ( intersact(ray, shapes))
+			return NULL;
+		else
+		{
+			return this;
+		}
+
 	}
 }
 
