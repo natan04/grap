@@ -6,6 +6,7 @@
 #include "Vector3f.h"
 #include "Structs.h"
 
+
 class Spher:
 	public Shape
 {
@@ -15,6 +16,7 @@ public:
 	Shape*  findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal );
 	Ray generateTranRay(Point intersection, Vector3f direction, Vector3f normal);
 	Color getAmbient(Point intersection) ;
+	Shape*  Spher::findIntersectionTrans(Ray ray, Vector3f& willReturn, Vector3f& normal );
 
 	GLboolean lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal,Vector3f directionOfSource );
 
@@ -23,6 +25,7 @@ private:
 
 	GLfloat fRadius;
 	GLfloat fRadiusSquare;
+	GLfloat fRefractiveIndex;
 	
 	
 

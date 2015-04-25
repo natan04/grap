@@ -139,7 +139,7 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 		Ray outTran = shape.generateTranRay(intersection, ray.direction, normal); 
 		shapeTran = FindIntersection(outTran, newIntersectionTran, normalTrans);
 		if ((shapeTran) ) 
-			trans = *shape.fKt * getColor(outTran, newIntersectionTran, newIntersectionTran, *shapeTran, level + 1);
+			trans = *shape.fKt * getColor(outTran, newIntersectionTran, normalTrans, *shapeTran, level + 1);
 	}	
 	color +=reflective + trans;
 	return color;

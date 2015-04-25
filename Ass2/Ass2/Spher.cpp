@@ -54,6 +54,8 @@ Spher::Spher(char* arg)
 				t2 = atof(strtok(NULL, SEP));
 				t3 = atof(strtok(NULL, SEP));
 				fKt = new Vector3f(t1,t2,t3);
+				t1 = atof(strtok(NULL, SEP));
+				fRefractiveIndex = t1;
 			}
 		}
 
@@ -68,6 +70,33 @@ Spher::~Spher(void)
 	delete fKs;
 }
 
+//assuming getting allocated vector inside will return param.
+Shape*  Spher::findIntersectionTrans(Ray ray, Vector3f& willReturn, Vector3f& normal )
+{
+
+	ray.startLocation = ray.direction*-2 + ray.startLocation;
+	Vector3f startPointToCenterOfSphere = *fCenterCoordinate - ray.startLocation ;
+	ray.direction.normalize();
+	GLfloat v = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
+	GLfloat lengthProjection = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
+	GLfloat dSquare =  startPointToCenterOfSphere.getSquaredLength() - pow(lengthProjection, 2);
+
+	
+	
+	if (v < 0 || dSquare > fRadiusSquare || dSquare < -0.00001  /*floating point loss of significent.*/)
+		return NULL;
+
+	GLfloat Th = sqrt(fRadiusSquare - dSquare);
+	GLfloat t = lengthProjection * 2*Th;
+	if (t <= 0)
+		t = lengthProjection - 2*Th;
+
+	willReturn = ray.startLocation + t*ray.direction;
+	normal = (willReturn -  *fCenterCoordinate);
+	normal.normalize();
+
+	return this;
+}
 //assuming getting allocated vector inside will return param.
 Shape*  Spher::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
@@ -96,7 +125,31 @@ Shape*  Spher::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 
 Ray Spher::generateTranRay(Point intersection, Vector3f direction, Vector3f normal)
 {
-	return Ray();
+	direction.normalize();
+	normal.normalize();
+	GLfloat angleIn = acos(Vector3f::dotProduct(normal, direction * -1));
+	GLfloat angleOut =  asin(sin(angleIn)/fRefractiveIndex);
+	Vector3f T = ((1/(fRefractiveIndex))*cos(angleIn) - cos(angleOut)) * normal;
+	T = T - (1/fRefractiveIndex)*(direction*-1);
+	Ray inside;
+	inside.direction = T;
+	inside.startLocation = intersection;
+
+
+	findIntersectionTrans(inside, intersection, normal); 
+		inside.direction.normalize();
+	normal.normalize();
+	 angleIn = acos(Vector3f::dotProduct(normal*-1, inside.direction * -1));
+	 GLfloat value = fRefractiveIndex*sin(angleIn);
+	 angleOut =  asin(fRefractiveIndex*sin(angleIn));
+	 T = (((fRefractiveIndex))*cos(angleIn) - cos(angleOut)) * normal;
+	T = T - (fRefractiveIndex)*( inside.direction *-1);
+	
+	inside.direction = T;
+	inside.startLocation = intersection;
+
+
+	return inside;
 }
 Color Spher::getAmbient(Point intersection) 
 {
@@ -120,3 +173,4 @@ GLboolean Spher::lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& norm
 
 	return true;
 }
+

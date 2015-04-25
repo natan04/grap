@@ -125,6 +125,8 @@ return true;
 Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 
+		ray.startLocation = -0.001*directionOfSource + ray.direction; //the problem with thin plane. we needed to take back the intersection point.
+
 	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
 	if (NdotV > 0.0001f)
 		normal = *fNormalToPlane * -1;
@@ -155,6 +157,8 @@ Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 }
 Color Plane::getAmbient(Point intersection)
 {
+	if (fMirror)
+		return Color(0,0,0);
 	Vector3f centerToIntersection = intersection - *fCenterToPoint;
 	  
 	GLfloat width = Vector3f::dotProduct(centerToIntersection, *fRight);
