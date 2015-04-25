@@ -19,7 +19,7 @@
 #define MAX_NAME_SIZE		10
 #define DELIMITER			","
 #define SPACE				" "
-#define MAX_LEVEL			10
+#define MAX_LEVEL			3
 
 class World
 {

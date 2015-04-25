@@ -14,8 +14,8 @@ public:
 	Light(char* values);
 	~Light(void);
 
-	GLboolean intersact(Ray& ray, std::vector<Shape*> & shapes);
-	Light* findIntersection(Vector3f& intersectionPoint, std::vector<Shape*> & shapes);
+Light* findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> & shapes ,Vector3f directionOfSource);
+	GLboolean Light::intersact(Ray& ray, std::vector<Shape*> & shapes, Vector3f directionOfSource);
 	Vector3f*	 fDirection;
 	Vector3f* fIntensity; 
 	Vector3f* fSpotlight;

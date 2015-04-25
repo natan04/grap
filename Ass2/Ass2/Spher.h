@@ -13,7 +13,11 @@ public:
 	Spher(char* arg);
 	~Spher(void);
 	Shape*  findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal );
+	Ray generateTranRay(Point intersection, Vector3f direction, Vector3f normal);
 	Color getAmbient(Point intersection) ;
+
+	GLboolean lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal,Vector3f directionOfSource );
+
 private:
 	Vector3f* fCenterCoordinate;
 

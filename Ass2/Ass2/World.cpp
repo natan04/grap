@@ -29,6 +29,7 @@ GLubyte* World::paint()
 
 	for (GLuint xAxis =0; xAxis < WIDTH; xAxis ++)
 	{
+		std::cout << 100*xAxis/WIDTH << "%" << std::endl;
 		for (GLuint yAxis = 000; yAxis < HEIGHT; yAxis++)
 		{
 			
@@ -106,7 +107,7 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 	
 	for(std::vector<Light*>::iterator it = fLights.begin(); it != fLights.end(); ++it)
 	{
-		if (Light* light =  (*it)->findIntersection(intersection, fShapes))
+		if (Light* light =  (*it)->findIntersection(intersection, fShapes,ray.direction))
 		{
 
 			Color diffuse, specular;
@@ -120,17 +121,27 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 		
 		}
 	}
-	if (MAX_LEVEL == level || (!shape.fKr))
+	if (MAX_LEVEL == level)
 		return color;
-	Color reflective;
-	Shape *newShape;
-	Vector3f normalNew, newIntersection;
-	Ray out = generateRayReflecttion(normal, ray, intersection);
-	newShape = FindIntersection(out, newIntersection, normalNew);
-	if (!(newShape) ) 
-		return color;
-	reflective = *shape.fKr * getColor(out, newIntersection, normalNew, *newShape, level + 1);
-	color +=reflective;
+	Color reflective, trans;
+	Shape *shapeRef, *shapeTran;
+	Vector3f normalTrans, normalRef, newIntersectionRef, newIntersectionTran;
+	Ray outRef = generateRayReflecttion(normal, ray, intersection);
+	shapeRef = FindIntersection(outRef, newIntersectionRef, normalRef);
+	trans.x = trans.y = trans.z = 0;
+	if (!(shapeRef) ) 
+		reflective.x = reflective.y = reflective.z = 0;
+	else
+		reflective = *shape.fKs * getColor(outRef, newIntersectionRef, normalRef, *shapeRef, level + 1);
+
+	if (shape.fKt)
+	{
+		Ray outTran = shape.generateTranRay(intersection, ray.direction, normal); 
+		shapeTran = FindIntersection(outTran, newIntersectionTran, normalTrans);
+		if ((shapeTran) ) 
+			trans = *shape.fKt * getColor(outTran, newIntersectionTran, newIntersectionTran, *shapeTran, level + 1);
+	}	
+	color +=reflective + trans;
 	return color;
 }
 

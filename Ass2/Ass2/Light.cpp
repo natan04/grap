@@ -49,7 +49,7 @@ Light::~Light(void)
 
 }
 
-Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> & shapes)
+Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> & shapes ,Vector3f directionOfSource)
 {
 	
 	if (fSpotlight)
@@ -58,7 +58,7 @@ Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> &
 		ray.startLocation = intersectionPoint;
 		ray.direction = *fSpotlight - intersectionPoint;
 	
-		if  ( intersact(ray, shapes))
+		if  ( intersact(ray, shapes, directionOfSource))
 			return NULL;
 		else
 		{
@@ -75,7 +75,7 @@ Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> &
 		//reversing the ray from lighter. and sending it from the intersection point
 		ray.startLocation = intersectionPoint;		
 		ray.direction = *fDirection * -1;
-		if ( intersact(ray, shapes))
+		if ( intersact(ray, shapes, directionOfSource))
 			return NULL;
 		else
 		{
@@ -85,11 +85,11 @@ Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> &
 	}
 }
 
-GLboolean Light::intersact(Ray& ray, std::vector<Shape*> & shapes)
+GLboolean Light::intersact(Ray& ray, std::vector<Shape*> & shapes, Vector3f directionOfSource)
 {
 	Vector3f intersection, normal;
 	for(std::vector<Shape*>::iterator it = shapes.begin(); it != shapes.end(); ++it) {
-		if (  ((*it)->findIntersectionPoint(ray, intersection, normal)))
+		if (  ((*it)->lightIntersection(ray, intersection, normal, directionOfSource)))
 			return true;
 	}
 	return false;
