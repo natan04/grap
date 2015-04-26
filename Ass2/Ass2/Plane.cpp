@@ -103,10 +103,14 @@ Plane::~Plane(void)
 
 GLboolean  Plane::lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal, Vector3f directionOfSource  )
 {
-	ray.startLocation = 0.001*directionOfSource + ray.direction; //the problem with thin plane. we needed to take back the intersection point.
+	 Vector3f point;
+	GLboolean back = true;
 	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
-		if (NdotV > 0.0001f)
+	if (NdotV > 0.0001f)
+	{
 		normal = *fNormalToPlane * -1;
+		back = false;
+	}
 	else
 		normal = *fNormalToPlane;
 	//if (NdotV < -0.00001f)
@@ -116,8 +120,19 @@ GLboolean  Plane::lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& nor
 	GLfloat t = Vector3f::dotProduct(normal, (*fCenterToPoint - ray.startLocation));
 	t /= NdotV;
 
-	if (t <= 0)
+	if (t < 0)
 		return false;
+
+
+		point = ray.startLocation + t*ray.direction;
+		
+	Vector3f centerToIntersection = point - *fCenterToPoint;
+
+	GLfloat width = Vector3f::dotProduct(centerToIntersection, *fRight);
+	GLfloat height = Vector3f::dotProduct(centerToIntersection, *fUp);
+	
+//	if (abs(width) > fWidth/2 || abs(height) > fLength/2)
+	//	return false;
 
 return true;
 }
@@ -125,11 +140,14 @@ return true;
 Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 
-		ray.startLocation = -0.001*ray.direction + ray.startLocation; //the problem with thin plane. we needed to take back the intersection point.
+	GLboolean back = false;
 
 	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
 	if (NdotV > 0.0001f)
+	{
 		normal = *fNormalToPlane * -1;
+		back  = true;
+	}
 	else
 		normal = *fNormalToPlane;
 	//if (NdotV < -0.00001f)
@@ -142,8 +160,11 @@ Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 	if (t < 0)
 		return NULL;
 
-	willReturn = ray.startLocation + t*ray.direction;
-	
+	if (back)
+		willReturn = ray.startLocation + t*ray.direction + 0.001*ray.direction;
+	else
+		willReturn = ray.startLocation + t*ray.direction - 0.001*ray.direction;
+		
 	Vector3f centerToIntersection = willReturn - *fCenterToPoint;
 
 	GLfloat width = Vector3f::dotProduct(centerToIntersection, *fRight);
@@ -151,6 +172,7 @@ Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 
 	if (abs(width) > fWidth/2 || abs(height) > fLength/2)
 		return NULL;
+
 
 
 	return this;	

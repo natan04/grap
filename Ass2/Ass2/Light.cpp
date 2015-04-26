@@ -20,7 +20,6 @@ Light::Light(char* args)
 	t3 = atof(strtok(NULL, SEP));
 	fIntensity = new Vector3f(t1, t2, t3);
 
-	//spotlight handle;
 	value = strtok(NULL, SEP);
 	if (value)
 	{
@@ -58,7 +57,6 @@ Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> &
 		ray.startLocation = intersectionPoint;
 		ray.direction = *fSpotlight - intersectionPoint;
 
-		ray.startLocation = ray.startLocation + ray.direction*0.001;
 		if  ( intersact(ray, shapes, directionOfSource))
 			return NULL;
 		else
