@@ -57,7 +57,8 @@ Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> &
 		Ray ray;
 		ray.startLocation = intersectionPoint;
 		ray.direction = *fSpotlight - intersectionPoint;
-	
+
+		ray.startLocation = ray.startLocation + ray.direction*0.001;
 		if  ( intersact(ray, shapes, directionOfSource))
 			return NULL;
 		else

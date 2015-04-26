@@ -74,7 +74,7 @@ Spher::~Spher(void)
 Shape*  Spher::findIntersectionTrans(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 
-	ray.startLocation = ray.direction*-2 + ray.startLocation;
+	ray.startLocation = ray.startLocation - ray.direction * 0.001;
 	Vector3f startPointToCenterOfSphere = *fCenterCoordinate - ray.startLocation ;
 	ray.direction.normalize();
 	GLfloat v = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
@@ -87,12 +87,12 @@ Shape*  Spher::findIntersectionTrans(Ray ray, Vector3f& willReturn, Vector3f& no
 		return NULL;
 
 	GLfloat Th = sqrt(fRadiusSquare - dSquare);
-	GLfloat t = lengthProjection * 2*Th;
+	GLfloat t = lengthProjection + Th;
 	if (t <= 0)
-		t = lengthProjection - 2*Th;
+		t = lengthProjection - Th;
 
-	willReturn = ray.startLocation + t*ray.direction;
-	normal = (willReturn -  *fCenterCoordinate);
+	willReturn = ray.startLocation + t*ray.direction;	
+	normal = (*fCenterCoordinate - willReturn  );
 	normal.normalize();
 
 	return this;
@@ -137,17 +137,23 @@ Ray Spher::generateTranRay(Point intersection, Vector3f direction, Vector3f norm
 
 
 	findIntersectionTrans(inside, intersection, normal); 
-		inside.direction.normalize();
+	inside.direction.normalize();
 	normal.normalize();
-	 angleIn = acos(Vector3f::dotProduct(normal*-1, inside.direction * -1));
-	 GLfloat value = fRefractiveIndex*sin(angleIn);
-	 angleOut =  asin(fRefractiveIndex*sin(angleIn));
-	 T = (((fRefractiveIndex))*cos(angleIn) - cos(angleOut)) * normal;
-	T = T - (fRefractiveIndex)*( inside.direction *-1);
+	 angleIn = acos(Vector3f::dotProduct(normal, inside.direction * -1));
+	 GLfloat value = sin(angleIn);
+	 angleOut =  asin(value*fRefractiveIndex);;
+	 if (_isnan(angleOut))
+		{
+		inside = generateRayReflecttion(normal, inside, intersection);
+	 }
+	 else
 	
-	inside.direction = T;
-	inside.startLocation = intersection;
-
+		 {
+			 T = (((fRefractiveIndex))*cos(angleIn) - cos(angleOut)) * normal;
+			T = T - (fRefractiveIndex)*( inside.direction *-1);
+			inside.direction = T;
+			inside.startLocation = intersection;
+	 }
 
 	return inside;
 }
@@ -174,3 +180,12 @@ GLboolean Spher::lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& norm
 	return true;
 }
 
+Ray Spher::generateRayReflecttion(Vector3f normal, Ray ray, Vector3f &intersection)
+{
+	Ray rayOut;
+	Vector3f reflective =  (ray.direction - 2*normal*(Vector3f::dotProduct(normal, ray.direction)));
+	rayOut.direction = reflective;
+	rayOut.startLocation = intersection;
+
+	return rayOut;
+}

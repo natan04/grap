@@ -26,7 +26,7 @@ private:
 	GLfloat fRadius;
 	GLfloat fRadiusSquare;
 	GLfloat fRefractiveIndex;
-	
+	Ray Spher::generateRayReflecttion(Vector3f normal, Ray ray, Vector3f &intersection);
 	
 
 };

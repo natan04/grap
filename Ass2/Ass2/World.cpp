@@ -30,7 +30,7 @@ GLubyte* World::paint()
 	for (GLuint xAxis =0; xAxis < WIDTH; xAxis ++)
 	{
 		std::cout << 100*xAxis/WIDTH << "%" << std::endl;
-		for (GLuint yAxis = 0; yAxis < HEIGHT; yAxis++)
+		for (GLuint yAxis = 0; yAxis <HEIGHT; yAxis++)
 		{
 			
 			Ray ray = fEye->generateRay(xAxis, yAxis);
@@ -149,7 +149,6 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 Ray World::generateRayReflecttion(Vector3f normal, Ray ray, Vector3f &intersection)
 {
 	Ray rayOut;
-	ray.startLocation = ray.startLocation -0.001*ray.direction;
 	Vector3f reflective =  (ray.direction - 2*normal*(Vector3f::dotProduct(normal, ray.direction)));
 	rayOut.direction = reflective;
 	rayOut.startLocation = intersection;

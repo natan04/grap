@@ -103,7 +103,7 @@ Plane::~Plane(void)
 
 GLboolean  Plane::lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal, Vector3f directionOfSource  )
 {
-	ray.startLocation = -0.001*directionOfSource + ray.direction; //the problem with thin plane. we needed to take back the intersection point.
+	ray.startLocation = 0.001*directionOfSource + ray.direction; //the problem with thin plane. we needed to take back the intersection point.
 	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
 		if (NdotV > 0.0001f)
 		normal = *fNormalToPlane * -1;
@@ -125,7 +125,7 @@ return true;
 Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 
-		ray.startLocation = -0.001*ray.direction + ray.direction; //the problem with thin plane. we needed to take back the intersection point.
+		ray.startLocation = -0.001*ray.direction + ray.startLocation; //the problem with thin plane. we needed to take back the intersection point.
 
 	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
 	if (NdotV > 0.0001f)

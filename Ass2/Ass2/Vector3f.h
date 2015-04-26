@@ -45,7 +45,6 @@
 #ifndef DEG2RAD
 #define DEG2RAD(x) (x * M_PI / 180)
 #endif
-
 #define DATATYPES_API
 #define SWAP(x,y) \
 	tmp = entry[x][y];	\
