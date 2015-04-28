@@ -18,8 +18,6 @@ public:
 	Color getAmbient(Point intersection) ;
 	Shape*  Spher::findIntersectionTrans(Ray ray, Vector3f& willReturn, Vector3f& normal );
 
-	GLboolean lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal,Vector3f directionOfSource );
-
 private:
 	Vector3f* fCenterCoordinate;
 

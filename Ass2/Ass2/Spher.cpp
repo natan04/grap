@@ -36,14 +36,16 @@ Spher::Spher(char* arg)
 	fMirror = 0;
 	fKt = NULL;
 	value = strtok(NULL, "");
+	fKr = NULL;
 	if (value)
 	{
 		if (strcmp(value,"M") == 0)
 		{
+			
 			fMirror = 1; 
 			*fKa *= 0;
 			*fKd *=0;
-			fKs->x = fKs->y = fKs ->z = 1;;
+			fKr = new Vector3f(1,1,1);
 		}
 		else
 		{
@@ -162,23 +164,6 @@ Color Spher::getAmbient(Point intersection)
 	return *fKa;
 }
 
-GLboolean Spher::lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal,Vector3f directionOfSource  )
-{
-	Vector3f startPointToCenterOfSphere = *fCenterCoordinate - ray.startLocation ;
-	ray.direction.normalize();
-	GLfloat v = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
-	GLfloat lengthProjection = Vector3f::dotProduct(startPointToCenterOfSphere, ray.direction);
-	GLfloat dSquare =  startPointToCenterOfSphere.getSquaredLength() - pow(lengthProjection, 2);
-
-	
-	
-	if (v < 0 || dSquare > fRadiusSquare || dSquare < -0.00001  /*floating point loss of significent.*/)
-		return false;
-
-
-
-	return true;
-}
 
 Ray Spher::generateRayReflecttion(Vector3f normal, Ray ray, Vector3f &intersection)
 {

@@ -15,7 +15,6 @@ public:
 	Shape*  findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal );
 		Color getAmbient(Point intersection) ;
 	Ray generateTranRay(Point intersection, Vector3f direction, Vector3f normal);
-	GLboolean lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal,Vector3f directionOfSource ) ;
 private:
 	Vector3f* fNormalToPlane;
 	Vector3f* fCenterToPoint;

@@ -129,10 +129,10 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 	Ray outRef = generateRayReflecttion(normal, ray, intersection);
 	shapeRef = FindIntersection(outRef, newIntersectionRef, normalRef);
 	trans.x = trans.y = trans.z = 0;
-	if (!(shapeRef) ) 
+	if ((!shapeRef || !shape.fKr) ) 
 		reflective.x = reflective.y = reflective.z = 0;
 	else
-		reflective = *shape.fKs * getColor(outRef, newIntersectionRef, normalRef, *shapeRef, level + 1);
+		reflective = *shape.fKr * getColor(outRef, newIntersectionRef, normalRef, *shapeRef, level + 1);
 
 	if (shape.fKt)
 	{

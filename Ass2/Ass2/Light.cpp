@@ -50,17 +50,30 @@ Light::~Light(void)
 
 Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> & shapes ,Vector3f directionOfSource)
 {
-	
+			Vector3f intersection;
+
 	if (fSpotlight)
 	{
 		Ray ray;
 		ray.startLocation = intersectionPoint;
 		ray.direction = *fSpotlight - intersectionPoint;
-
-		if  ( intersact(ray, shapes, directionOfSource))
-			return NULL;
+		GLboolean intersactPoint = intersact(ray, shapes, directionOfSource, intersection);
+	
+		if  (intersactPoint)
+		{
+			GLdouble lengthToSpotLight = Vector3f::squaredDistance(ray.startLocation, *fSpotlight);
+			GLdouble lengthToIntersection = Vector3f::squaredDistance(ray.startLocation, intersection);
+			if (lengthToSpotLight > lengthToIntersection)
+				return NULL;
+			GLfloat angle = acos(Vector3f::dotProduct(ray.direction, *fDirection*-1)/(ray.direction.getLength()*fDirection->getLength()));
+			if (angle > fCutoff)
+				return NULL;
+			else
+				return this;
+		}
 		else
 		{
+
 			GLfloat angle = acos(Vector3f::dotProduct(ray.direction, *fDirection*-1)/(ray.direction.getLength()*fDirection->getLength()));
 			if (angle > fCutoff)
 				return NULL;
@@ -74,7 +87,7 @@ Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> &
 		//reversing the ray from lighter. and sending it from the intersection point
 		ray.startLocation = intersectionPoint;		
 		ray.direction = *fDirection * -1;
-		if ( intersact(ray, shapes, directionOfSource))
+		if ( intersact(ray, shapes, directionOfSource, intersection))
 			return NULL;
 		else
 		{
@@ -84,11 +97,11 @@ Light* Light::findIntersection(Vector3f& intersectionPoint,std::vector<Shape*> &
 	}
 }
 
-GLboolean Light::intersact(Ray& ray, std::vector<Shape*> & shapes, Vector3f directionOfSource)
+GLboolean Light::intersact(Ray& ray, std::vector<Shape*> & shapes, Vector3f directionOfSource, Vector3f& intersection)
 {
-	Vector3f intersection, normal;
+	Vector3f  normal;
 	for(std::vector<Shape*>::iterator it = shapes.begin(); it != shapes.end(); ++it) {
-		if (  ((*it)->lightIntersection(ray, intersection, normal, directionOfSource)))
+		if (  ((*it)->findIntersectionPoint(ray, intersection, normal)))
 			return true;
 	}
 	return false;

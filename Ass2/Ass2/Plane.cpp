@@ -42,6 +42,8 @@ Plane::Plane(char* arg)
 	fShininess =  atof(strtok(NULL, " "));
 	fMirror = 0;
 	fKt = NULL;
+	fKr = NULL;
+
 	value = strtok(NULL, "");
 	if (value)
 	{
@@ -51,7 +53,7 @@ Plane::Plane(char* arg)
 			fMirror = 1; 
 			*fKa *= 0;
 			*fKd *=0;
-			fKs->x = fKs->y = fKs ->z = 1;;
+			fKr = new Vector3f(1,1,1);
 		}
 		else
 			{
@@ -101,52 +103,16 @@ Plane::~Plane(void)
 }
 
 
-GLboolean  Plane::lightIntersection(Ray ray, Vector3f& willReturn, Vector3f& normal, Vector3f directionOfSource  )
-{
-	 Vector3f point;
-	GLboolean back = true;
-	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
-	if (NdotV > 0.0001f)
-	{
-		normal = *fNormalToPlane * -1;
-		back = false;
-	}
-	else
-		normal = *fNormalToPlane;
-	//if (NdotV < -0.00001f)
-	//	return NULL; 
-	NdotV = Vector3f::dotProduct(normal,  ray.direction);
-
-	GLfloat t = Vector3f::dotProduct(normal, (*fCenterToPoint - ray.startLocation));
-	t /= NdotV;
-
-	if (t < 0)
-		return false;
-
-
-		point = ray.startLocation + t*ray.direction;
-		
-	Vector3f centerToIntersection = point - *fCenterToPoint;
-
-	GLfloat width = Vector3f::dotProduct(centerToIntersection, *fRight);
-	GLfloat height = Vector3f::dotProduct(centerToIntersection, *fUp);
-	
-//	if (abs(width) > fWidth/2 || abs(height) > fLength/2)
-	//	return false;
-
-return true;
-}
-
 Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 
-	GLboolean back = false;
+	GLboolean back = true;
 
 	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
 	if (NdotV > 0.0001f)
 	{
 		normal = *fNormalToPlane * -1;
-		back  = true;
+		back  = false;
 	}
 	else
 		normal = *fNormalToPlane;
@@ -161,9 +127,9 @@ Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 		return NULL;
 
 	if (back)
-		willReturn = ray.startLocation + t*ray.direction + 0.001*ray.direction;
-	else
 		willReturn = ray.startLocation + t*ray.direction - 0.001*ray.direction;
+	else
+		willReturn = ray.startLocation + t*ray.direction + 0.001*ray.direction;
 		
 	Vector3f centerToIntersection = willReturn - *fCenterToPoint;
 
