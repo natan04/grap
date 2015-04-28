@@ -15,9 +15,10 @@ public:
 	Shape*  findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal );
 		Color getAmbient(Point intersection) ;
 	Ray generateTranRay(Point intersection, Vector3f direction, Vector3f normal);
-private:
 	Vector3f* fNormalToPlane;
 	Vector3f* fCenterToPoint;
+private:
+
 	Vector3f* fRight;
 	Vector3f* fUp;
 	

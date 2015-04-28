@@ -106,30 +106,30 @@ Plane::~Plane(void)
 Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& normal )
 {
 
-	GLboolean back = true;
+	GLboolean inDirectionNormal = false;
 
 	GLfloat NdotV = Vector3f::dotProduct(*fNormalToPlane,  ray.direction);
-	if (NdotV > 0.0001f)
+	if (NdotV <= 0)
 	{
-		normal = *fNormalToPlane * -1;
-		back  = false;
+		normal = *fNormalToPlane ;
+		inDirectionNormal  = true;
 	}
 	else
-		normal = *fNormalToPlane;
-	//if (NdotV < -0.00001f)
-	//	return NULL; 
+		normal = *fNormalToPlane * -1;
+
 	NdotV = Vector3f::dotProduct(normal,  ray.direction);
 
 	GLfloat t = Vector3f::dotProduct(normal, (*fCenterToPoint - ray.startLocation));
-	t /= NdotV;
-
-	if (t < 0)
+	if (!(NdotV))
 		return NULL;
 
-	if (back)
-		willReturn = ray.startLocation + t*ray.direction - 0.001*ray.direction;
-	else
-		willReturn = ray.startLocation + t*ray.direction + 0.001*ray.direction;
+	t /= NdotV;
+
+	if (t <= 0)
+		return NULL;
+
+
+		willReturn = ray.startLocation + t*ray.direction ;
 		
 	Vector3f centerToIntersection = willReturn - *fCenterToPoint;
 

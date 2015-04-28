@@ -112,7 +112,7 @@ Color World::getColor( Ray ray,  Vector3f &intersection, const Vector3f &normal,
 
 			Color diffuse, specular;
 			diffuse *=0; specular*=0;
-			Vector3f NormalToLight = (*light->fDirection)* -1; //we need to oposite direction
+			Vector3f NormalToLight = (*light->fDirection)*-1; //we need to oposite direction
 			NormalToLight.normalize();
 				
 			diffuse  = (*shape.fKd) * (Vector3f::dotProduct(normal, NormalToLight));
@@ -230,8 +230,15 @@ void World::addToWorld(char* lineArg)
 	}
 	else if (strcmp(name, "plane") == 0)
 	{
+		char sec[MAX_CHARS_PER_LINE] ;
+		strcpy(sec,  rest);
 		Shape* shape = new Plane(rest);
+
+		Plane* shape1 = new Plane(sec);
+		shape1->fNormalToPlane->normalize();
+		*shape1->fCenterToPoint  = *(shape1->fCenterToPoint) + 0.001* (*shape1->fNormalToPlane);
 		fShapes.push_back(shape);
+		fShapes.push_back(shape1);
 	}
 }
 
