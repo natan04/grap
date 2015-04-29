@@ -49,7 +49,7 @@ Plane::Plane(char* arg)
 	{
 		if (strcmp(value,"M") == 0)
 		{
-
+			
 			fMirror = 1; 
 			*fKa *= 0;
 			*fKd *=0;
@@ -80,6 +80,7 @@ else
 		//fUp = new Vector3f(0, fLength/2 , 0);
 		fUp = new Vector3f(0, 1 , 0);
 		fRight = new Vector3f( Vector3f::crossProduct(*fNormalToPlane, *fUp));
+	*fRight *=-1; 
 	}
 	else
 		if (fNormalToPlane->z == 0 )
@@ -118,14 +119,14 @@ Shape*  Plane::findIntersectionPoint(Ray ray, Vector3f& willReturn, Vector3f& no
 		normal = *fNormalToPlane * -1;
 
 	NdotV = Vector3f::dotProduct(normal,  ray.direction);
-
+		
 	GLfloat t = Vector3f::dotProduct(normal, (*fCenterToPoint - ray.startLocation));
 	if (!(NdotV))
 		return NULL;
 
 	t /= NdotV;
 
-	if (t <= 0)
+	if (t < 0.0001f)
 		return NULL;
 
 

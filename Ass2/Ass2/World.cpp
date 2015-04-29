@@ -233,12 +233,12 @@ void World::addToWorld(char* lineArg)
 		char sec[MAX_CHARS_PER_LINE] ;
 		strcpy(sec,  rest);
 		Shape* shape = new Plane(rest);
-
-		Plane* shape1 = new Plane(sec);
-		shape1->fNormalToPlane->normalize();
-		*shape1->fCenterToPoint  = *(shape1->fCenterToPoint) + 0.001* (*shape1->fNormalToPlane);
 		fShapes.push_back(shape);
-		fShapes.push_back(shape1);
+		Plane* shape2 = new Plane(sec);
+		shape2->fNormalToPlane->normalize();
+		*shape2->fCenterToPoint = *shape2->fCenterToPoint +  0.001**shape2->fNormalToPlane;
+		fShapes.push_back(shape);
+
 	}
 }
 
