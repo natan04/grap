@@ -26,7 +26,7 @@ public:
 	GLuint		fRyD2;
 	Vector3f*	fAmbientLighting;
 	Ray Eye::generateRay(GLuint aX, GLuint aY);
-	Ray Eye::generateFishRay(GLuint aX, GLuint aY);
+	Ray Eye::generateRayFish(GLuint aX, GLuint aY);
 	
 
 

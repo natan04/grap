@@ -51,21 +51,20 @@ GLubyte* World::paint()
 	
 }
 
-/*
+
 GLubyte* World::paintFish()
 {
 
 	WIDTH = fEye->fRx;
 	HEIGHT = fEye->fRy;
 	Color* screen = (Color*) malloc(sizeof(Color) * (HEIGHT * WIDTH)); 
-	
-
 	for (GLuint xAxis =0; xAxis < WIDTH; xAxis ++)
 	{
-		for (GLuint yAxis = 0; yAxis < HEIGHT; yAxis++)
+		std::cout << 100*xAxis/WIDTH << "%" << std::endl;
+		for (GLuint yAxis = 0; yAxis <HEIGHT; yAxis++)
 		{
 			
-			Ray ray = fEye->generateFishRay(xAxis, yAxis);
+			Ray ray = fEye->generateRayFish(xAxis, yAxis);
 			Shape* shape;
 			Vector3f intersection, normal;
 			if (shape = FindIntersection(ray, intersection, normal))
@@ -82,7 +81,7 @@ GLubyte* World::paintFish()
 	return (GLubyte*) screen;
 	
 }
-*/
+
 Color World::sanity(Color& color)
 {
 	if (color.x > 1) 

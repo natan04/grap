@@ -60,25 +60,28 @@ Ray Eye::generateRay(GLuint aX, GLuint aY)
 	return ray;
 }
 
-/*
-Ray Eye::generateFishRay(GLuint aX, GLuint aY)
+Ray Eye::generateRayFish(GLuint aX, GLuint aY)
 {
 	Ray ray;
+	GLfloat dis = fTowardVector->getSquaredLength();
 	Vector3f right = (*fRightVector);
 	GLfloat valueX =  ((GLfloat)aX - fRxD2)*fPixelToWorld;
 	GLfloat valueY =  ((GLfloat)aY - fRyD2)*fPixelToWorld;
+
+
+	GLfloat newZ = dis -  valueX*valueX - valueY*valueY;
+
+	fTowardVector->normalize();
 	
-	Vector3f point= (*fScreenCenter) +  valueX *  (*fRightVector)  + valueY * (*fUpVector) ;
-	Vector3f direction = point - (*fCameraLocation);
-	GLfloat length = direction.length
-	Vector3f axis = (*fScreenCenter) - (*fCameraLocation);
-	 acos(Vector3f::dotProduct(direction, axis)/(ray.direction.getLength()*fDirection->getLength()))
-	point = fScreenCenter
+
+		Vector3f point= (*fScreenCenter) +  valueX *  (*fRightVector)  + valueY * (*fUpVector) ;
+		ray.direction = *fTowardVector * (sqrt(dis) - sqrt(newZ)) + point;
+
 	ray.startLocation = *fCameraLocation;
 	ray.direction.normalize();
 	return ray;
 }
-*/
+
 
 
 void Eye::init()

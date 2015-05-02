@@ -48,14 +48,19 @@ void bla()
 int main(int  argc,  char** argv) 
 {
 
-	if  (argc ==  2)
+	if  (argc >=  2)
 		readFromFile(argv[1], world);
 	else
+
 		exit(1);
 
 
 	glutInit (& argc, argv) ;
 
+	std::cout << argv[2] << std::endl;
+	if (argc == 3 && (strcmp(argv[2],"fish") == 0))
+		picture = world.paintFish();
+	else
 	picture = world.paint();
 	
 
