@@ -1,5 +1,4 @@
 #include "data.h"
-
 void Data::add(char* buf)
 {
 
@@ -10,6 +9,7 @@ void Data::add(char* buf)
 	char* name =  strtok(buf, SEP); // first token	
 	char* rest = strtok(NULL, "");
 
+	
 	if (strcmp(name, "f") == 0)
 		fFaces.push_back(parseFaces(rest));
 

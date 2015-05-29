@@ -8,15 +8,19 @@
 #include <fstream>
 #include "data.h"
 
-#define MAX_CHARS_PER_LINE 100
+#define MAX_CHARS_PER_LINE 500
 
-enum Movenment {UP, RIGHT, LEFT, DOWN};
+GLfloat modelMatrix[16];
 
-Movenment direction;
+GLfloat cameraMatrix[16];
+
+int mouseState;
 GLfloat angle = 60;
 GLuint rotUp = 0;
-GLfloat rotRight;
+GLfloat rotRight;    
 int xM,yM;
+int xx,yy,ii,jj;
+float zz;
 
 float w, h, tip = 0, turn = 0;
 
@@ -33,6 +37,14 @@ GLuint tex;
 Data* data ;
 std::vector<ReturnedFace*> values;
 
+
+void disp()
+{
+		glMatrixMode(GL_MODELVIEW);
+		glLoadMatrixf(modelMatrix);
+		glMultMatrixf(cameraMatrix);
+		glutPostRedisplay();
+}
 
 void initLight()
 {
@@ -70,6 +82,7 @@ void initLight()
 
 	glEnable(GL_COLOR_MATERIAL);
 	//	glDisable(GL_LIGHTING);
+		glLoadIdentity();
 
 }
 
@@ -127,41 +140,43 @@ void spaciel(int key, int x, int y)
 	switch(key)
 	{
 	case GLUT_KEY_UP : 
+		glPushMatrix();		
+		glLoadMatrixf(modelMatrix);
 		glScalef( 1 + 0.05 ,1+ 0.05 ,1.0f + 0.05 );
-		glutPostRedisplay();
+		glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
+		glPopMatrix();
+		disp();
 		break;
 
 	case  GLUT_KEY_DOWN : 
-		glScalef( 1 -0.05,1 - 0.05,1.0f - 0.05 );
+		glPushMatrix();		
+		glLoadMatrixf(modelMatrix);
+		glScalef( 1 - 0.05 ,1 - 0.05 ,1.0f - 0.05 );
+		glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
+		glPopMatrix();
+		disp();
 		glutPostRedisplay();
 		break;
 
 	case GLUT_KEY_F2:
-		glPushMatrix();
 		glMatrixMode(GL_PROJECTION); /* switch matrix mode */
-		glLoadIdentity();		//load Identity matrix
-
+		glLoadIdentity();
 		gluPerspective(angle += 0.5 ,1,2,200);
-		glTranslatef(0,0,-100);
 
-		glutPostRedisplay();
+		disp();
+		
 
-		glMatrixMode(GL_MODELVIEW);
-		glPopMatrix();
 		break;
 
 
 	case GLUT_KEY_F3:
-		glPushMatrix();
 		glMatrixMode(GL_PROJECTION); /* switch matrix mode */
-		glLoadIdentity();		//load Identity matrix
-
+		
 		gluPerspective(angle -= 0.5 ,1,2,200);
-		glTranslatef(0,0,-100);
 
+		disp();
 		glutPostRedisplay();
-		glMatrixMode(GL_MODELVIEW);
-		glPopMatrix();
+
 		break;
 
 
@@ -179,15 +194,7 @@ void Keyboard (unsigned char key, int x, int y)
 		glTranslatef(0,10,0);
 		glutPostRedisplay();
 		break;
-	case GLUT_KEY_UP : 
-		glScalef( 1 + 0.05 ,1+ 0.05 ,1.0f + 0.05 );
-		glutPostRedisplay();
-		break;
 
-	case  GLUT_KEY_DOWN : 
-		glScalef( 1 -0.05,1 - 0.05,1.0f - 0.05 );
-		glutPostRedisplay();
-		break;
 
 
 	default: printf ("   Keyboard %c == %d\n", key, key);
@@ -215,59 +222,20 @@ void Draw_Teapot(void)
 
 void mouse(int button, int state, int x, int y) 
 {
-	switch (button) {
-	case GLUT_LEFT_BUTTON:
 
-		if (state == GLUT_DOWN)
-		{
-			yM = y;
-		}
-
-		if (yM > y &&  state == GLUT_UP	)
-		{
-			yM = y;
-
-			rotUp +=180;
-			glutPostRedisplay();
-		}
-
-		break;
-	case GLUT_MIDDLE_BUTTON:
-		if (state == GLUT_DOWN){
-
-			glMatrixMode(GL_MODELVIEW);
-			glTranslatef(0,0,-20);
-			glutPostRedisplay();
-		}
-		break;
-
-	case GLUT_RIGHT_BUTTON:
-		if (state == GLUT_DOWN){
-
-			glMatrixMode(GL_MODELVIEW);
-			glTranslatef(0,0,20);
-			glutPostRedisplay();
-		}
-		break;
-	}
+		xx=x;
+		yy=y;
+		mouseState = button;
 }
 
 void display()
 {
+
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
-	glRotatef(rotUp,1,0,0); //rotate scene
-	rotUp = 0;
-	/*glBegin(GL_POLYGON);
-	Draw_Axes ();
-
-	Draw_Teapot();
-	glEnd();
-	*/
-	//Draw_Teapot();
-
 	for (std::vector<ReturnedFace*>::iterator it = values.begin(); it != values.end(); ++it){
 
-		int runner;
+		GLuint runner;
 
 		glMaterialfv(GL_FRONT, GL_AMBIENT, Vector3f(0.3, 0.4, 0.5));
 		glMaterialfv(GL_FRONT, GL_DIFFUSE, Vector3f(0.0, 0.6, 0.7));
@@ -278,7 +246,6 @@ void display()
 		else		
 			glBegin(GL_TRIANGLES);
 
-		Draw_Teapot();
 		for (runner = 0; runner < (*it)->count; runner++)
 		{
 
@@ -294,9 +261,11 @@ void display()
 
 }
 
+
+
 void init()
 {
-	float modelMatrix[16],projectionMatrix[16];
+	
 	glClearColor(0,0,0,1);
 
 	glMatrixMode(GL_PROJECTION); /* switch matrix mode */
@@ -304,10 +273,9 @@ void init()
 
 	//defines view mode
 	gluPerspective(60,1,2,200);
-	//glRotatef(180,0,1,0);
-	glTranslatef(0,0,-100);
-
-	//glTranslatef(0,1,0);
+	
+	//glTranslatef(0,0,-100);
+	
 	//gluLookAt(0,-1,-1,0,-2,-2,1,1,0);  //define view direction
 	//gluLookAt(0,-1,-1,0,0,0,1,1,0);  //define view direction
 
@@ -317,12 +285,82 @@ void init()
 	/* return to modelview mode */
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+	
+	glPushMatrix();
+	glTranslatef(0,0,-100);
+	glGetFloatv(GL_MODELVIEW_MATRIX, cameraMatrix);
+	glPopMatrix();
+//		
+	
+	glLoadIdentity();
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
 
 }
 
 
 
+void motion(int x,int y)
+{
+	float sensitivity = 0.1;
+	int dy = -y + yy;
+	int dx = x - xx;
+	switch (mouseState){
 
+	case GLUT_LEFT_BUTTON:
+	
+
+
+		glMatrixMode(GL_MODELVIEW);
+
+		glPushMatrix();		
+		glLoadMatrixf(modelMatrix);
+		glRotatef( dy*sensitivity, 1 ,0,0 );
+		glRotatef( dx*sensitivity, 0 ,0,1 );
+		
+		glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
+		glPopMatrix();
+	
+		disp();
+		break;
+	
+
+
+	case GLUT_MIDDLE_BUTTON:	
+				
+		
+		glMatrixMode(GL_MODELVIEW);
+
+		glPushMatrix();		
+		glLoadMatrixf(modelMatrix);
+		glTranslatef( 0 ,0,  dy*sensitivity );
+
+		
+		glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
+		glPopMatrix();
+	
+		disp();
+		break;
+
+		case GLUT_RIGHT_BUTTON:	
+			
+		glMatrixMode(GL_MODELVIEW);
+
+		glPushMatrix();		
+		glLoadMatrixf(modelMatrix);
+		glTranslatef( 0,  dy*sensitivity, 0 );
+		glTranslatef( dx*sensitivity, 0,0 );
+
+		
+		glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
+		glPopMatrix();
+	
+		disp();
+		break;
+	}
+		xx = x;
+		yy = y;   
+
+}
 
 int main(int  argc,  char** argv) 
 {
@@ -346,11 +384,13 @@ int main(int  argc,  char** argv)
 	initLight();
 	glutDisplayFunc(display); 
 	glutTimerFunc(2,disp,0);
+	   glutMotionFunc(motion);
 
 	glutMouseFunc(mouse);
 	glutKeyboardFunc(Keyboard);
 	glutSpecialFunc(spaciel);
-
+	disp();
+	  
 
 	glutMainLoop();
 
