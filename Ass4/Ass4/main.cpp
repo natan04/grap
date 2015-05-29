@@ -48,13 +48,7 @@ std::vector<ReturnedFace*> values;
 
 void disp()
 {
-		glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixf(modelMatrix);
-		glRotated(rotXcam, 1, 0 ,0);
-		glRotated(rotYcam, 0, 1 ,0);
-		glMultMatrixf(transCamera);
-		glScaled(scale, scale, scale);
-		
+
 		glutPostRedisplay();
 }
 
@@ -217,6 +211,15 @@ void display()
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glDisable(GL_NORMALIZE);
+			glMatrixMode(GL_MODELVIEW);
+		glLoadMatrixf(modelMatrix);
+		glRotated(rotXcam, 1, 0 ,0);
+		glRotated(rotYcam, 0, 1 ,0);
+		glMultMatrixf(transCamera);
+		Draw_Axes();
+		
+		glScaled(scale, scale, scale);
+
 	for (std::vector<ReturnedFace*>::iterator it = values.begin(); it != values.end(); ++it){
 
 		GLuint runner;
@@ -240,7 +243,7 @@ void display()
 
 
 	}
-		Draw_Axes();
+		//Draw_Axes();
 
 	glFlush();
 
