@@ -49,7 +49,6 @@ std::vector<ReturnedFace*> values;
 void disp()
 {
 
-		glutPostRedisplay();
 }
 
 void initLight()
@@ -404,6 +403,11 @@ break;
 	
 }
 
+void dispTimer(int value)
+{
+	glutPostRedisplay();
+	glutTimerFunc(1,dispTimer,0);
+}
 int main(int  argc,  char** argv) 
 {
 	data = new Data();
@@ -432,6 +436,7 @@ int main(int  argc,  char** argv)
 	glutSpecialFunc(spaciel);
 	disp();
 	  
+	   glutTimerFunc(2,dispTimer,0);
 
 	glutMainLoop();
 
