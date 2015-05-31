@@ -16,6 +16,8 @@ MODE sceneMode;
 
 
 GLfloat modelMatrix[16];
+GLfloat rotateModelMatrix[16];
+
 GLfloat transCamera[16];
 GLdouble rotXcam, rotYcam;
 GLdouble scale = 1;
@@ -211,12 +213,18 @@ void display()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glDisable(GL_NORMALIZE);
 			glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixf(modelMatrix);
+		
+			glLoadIdentity();
+		glRotated(rotYcam, 0, 1 ,0);	
 		glRotated(rotXcam, 1, 0 ,0);
-		glRotated(rotYcam, 0, 1 ,0);
+
+			glMultMatrixf(modelMatrix);
+
 		glMultMatrixf(transCamera);
 		Draw_Axes();
 		
+			
+		glMultMatrixf(rotateModelMatrix);
 		glScaled(scale, scale, scale);
 
 	for (std::vector<ReturnedFace*>::iterator it = values.begin(); it != values.end(); ++it){
@@ -278,6 +286,7 @@ void init()
 	
 	glLoadIdentity();
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
+	glGetFloatv(GL_MODELVIEW_MATRIX, rotateModelMatrix);
 
 
 }
@@ -303,11 +312,11 @@ case  GLOBAL:
 				glMatrixMode(GL_MODELVIEW);
 
 				glPushMatrix();		
-				glLoadMatrixf(modelMatrix);
+				glLoadMatrixf(rotateModelMatrix);
 				glRotatef( dy*180/m_viewport[3], 1 ,0,0 );
 				glRotatef( dx*180/m_viewport[2], 0 ,0,1 );
 		
-				glGetFloatv(GL_MODELVIEW_MATRIX, modelMatrix);
+				glGetFloatv(GL_MODELVIEW_MATRIX, rotateModelMatrix);
 				glPopMatrix();
 	
 				disp();
