@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 ﻿Build started 31/05/2015 14:58:32.
+=======
+﻿Build started 30/05/2015 00:37:59.
+>>>>>>> d623f4616d22550a972a82aeb216fca28c450ea2
      1>Project "C:\Users\Natan\OneDrive\git\grap\Ass4\Ass4\Ass4.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I"C:\Users\Natan\OneDrive\git\grap\GL Files\include\GL" /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _CRT_SECURE_NO_WARNINGS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
          main.cpp
+     1>cl : Command line warning D9028: minimal rebuild failure, reverting to normal build
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\Natan\OneDrive\git\grap\Ass4\Debug\Ass4.exe" /INCREMENTAL /NOLOGO /LIBPATH:"C:\Users\Natan\OneDrive\git\grap\GL Files\lib" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\Natan\OneDrive\git\grap\Ass4\Debug\Ass4.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\Natan\OneDrive\git\grap\Ass4\Debug\Ass4.lib" /MACHINE:X86 Debug\data.obj
          Debug\main.obj
@@ -11,4 +16,8 @@
 
 Build succeeded.
 
+<<<<<<< HEAD
 Time Elapsed 00:00:01.86
+=======
+Time Elapsed 00:00:01.82
+>>>>>>> d623f4616d22550a972a82aeb216fca28c450ea2
