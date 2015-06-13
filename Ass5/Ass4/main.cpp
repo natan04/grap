@@ -7,19 +7,28 @@
 #include <Windows.h>
 #include <fstream>
 #include "data.h"
+float zValue[4];
+
 #define stringify( name ) # name
 #define MAX_CHARS_PER_LINE 500
+#define GLUPERS 	gluPerspective(60,1,2,200);
+
+#define bufSize 512
 Face* parseFaces(char* buf);
-enum MODE {CAMERA, GLOBAL };
+enum MODE {CAMERA, GLOBAL, PICKING	};
 MODE sceneMode;
+enum MODE_PICKING {TRANSLATION, ROTATION, SCALE	};
+MODE_PICKING pickingMode;
 
 GLfloat transCamera[16];
 GLfloat rotateCamera[16];
 GLfloat rotateGlobalMatrix[16];
 GLfloat transGlobalMatrix[16];
-
+bool finishPicking;
+bool * pickingArray;
 GLdouble scale = 1;
-
+bool press;
+GLint hits;
 int mouseState;
 GLfloat angle = 60;
 GLuint rotUp = 0;
@@ -53,6 +62,73 @@ CalObjects* objects;
 
 GLuint howManyObjects ;
 
+void paintSphere()
+{
+	GLUquadricObj*  Sphere=gluNewQuadric();
+   gluSphere(Sphere,0.3,1,1);
+	
+}
+
+void drawAll(GLenum mode) //draws square
+{
+
+	for (GLuint runner = 0; runner < howManyObjects; runner++)
+	{
+		glPushMatrix();
+
+		if(mode==GL_SELECT)
+			glLoadName( runner);
+
+		glMultMatrixf(objects[runner].rotation);
+		glMultMatrixf(objects[runner].trans);
+		std::vector<ReturnedFace*>* values = objects[runner].values;
+		for (std::vector<ReturnedFace*>::iterator it = values->begin(); it != values->end(); ++it)
+		{
+	
+			if (pickingArray[runner])
+			{	
+				GLfloat mat_s[] = {1,0,0};
+				glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
+
+			}
+			else{
+				glMaterialfv(GL_FRONT, GL_AMBIENT, Vector3f(0.3, 0.4, 0.5));
+				glMaterialfv(GL_FRONT, GL_DIFFUSE, Vector3f(0.0, 0.6, 0.7));
+				glMaterialfv(GL_FRONT, GL_SPECULAR, Vector3f(0.0, 0.0, 0.8));
+			}
+				if ((*it)->count > 3)
+					glBegin(GL_POLYGON);
+				else		
+					glBegin(GL_TRIANGLES);	
+
+				for (GLuint runnerInside = 0; runnerInside < (*it)->count; runnerInside++)
+				{
+					glNormal3fv((GLfloat*)(*it)->normals[runnerInside]);
+					glVertex3fv((GLfloat*)(*it)->vetexs[runnerInside]);
+				}
+				glEnd();
+
+				
+			
+		}
+			
+			GLfloat mat_s[] = {0.0, 0.0, 0.4, 1.0};
+			glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
+
+
+		glPopMatrix();
+		
+	}
+}
+
+void startPicking(GLuint *selectionBuf)
+{
+	glSelectBuffer(bufSize,selectionBuf); //declare buffer for input in selection mode
+	glRenderMode(GL_SELECT); //change to selecting mode
+	glInitNames();			//initialize names stack
+	glPushName(-1);			//push name
+}
+
 void disp()
 {
 
@@ -62,33 +138,33 @@ void initLight()
 {
 
 	//lightning
-    GLfloat light_direction[]={0,-1,-1,0};
-    GLfloat light_ambient[] = {0.5, 0.5, 0.5, 1.0}; //ambient color
-    GLfloat light_diffuse[] = {0.0, 0.5, 0.5, 1.0}; //diffuse color
-    GLfloat light_specular[] = {0.0, 0.0, 0.5, 1.0};
+	GLfloat light_direction[]={0,-1,-1,0};
+	GLfloat light_ambient[] = {0.5, 0.5, 0.5, 1.0}; //ambient color
+	GLfloat light_diffuse[] = {0.0, 0.5, 0.5, 1.0}; //diffuse color
+	GLfloat light_specular[] = {0.0, 0.0, 0.5, 1.0};
 	//GLfloat angle[] = {20.0};
 
 	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_direction);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+	glLightfv(GL_LIGHT0, GL_POSITION, light_direction);
 
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
 
-	 GLfloat mat_a[] = {0.4, 0.4, 0.5, 1.0};
-    GLfloat mat_d[] = {0.0, 0.6, 0.7, 1.0};
-    GLfloat mat_s[] = {0.0, 0.0, 0.4, 1.0};
-    GLfloat low_sh[] = {5.0};
+	GLfloat mat_a[] = {0.4, 0.4, 0.5, 1.0};
+	GLfloat mat_d[] = {0.0, 0.6, 0.7, 1.0};
+	GLfloat mat_s[] = {0.0, 0.0, 0.4, 1.0};
+	GLfloat low_sh[] = {5.0};
 
-	  glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, low_sh);
-    glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, low_sh);
+	glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
 
-	  glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_COLOR_MATERIAL);
 
 }
 
@@ -111,7 +187,7 @@ void readFromFile(char* value, Data &objects, vector<vector<Face*>*>& faces)
 
 		char* name =  strtok(buf, SEP); // first token	
 		char* rest = strtok(NULL, "");
-		
+
 		if (strcmp(name, "o") == 0)
 		{
 			facesObject = new vector<Face*>();
@@ -123,7 +199,7 @@ void readFromFile(char* value, Data &objects, vector<vector<Face*>*>& faces)
 			facesObject->push_back(parseFaces(rest));
 			continue;
 		}
-		
+
 		objects.add(name, rest);
 		memset(&buf, 0, MAX_CHARS_PER_LINE);
 	}
@@ -133,8 +209,8 @@ void readFromFile(char* value, Data &objects, vector<vector<Face*>*>& faces)
 void Draw_Axes (void)
 {
 	glPushMatrix ();
-	 glPushAttrib(GL_CURRENT_BIT);
-	 glMatrixMode(GL_MODELVIEW);
+	glPushAttrib(GL_CURRENT_BIT);
+	glMatrixMode(GL_MODELVIEW);
 
 	glBegin (GL_LINES);
 	glColor3f (1,0,0); // X axis is red.
@@ -179,7 +255,7 @@ void spaciel(int key, int x, int y)
 		gluPerspective(angle += 0.5 ,1,2,200);
 
 		disp();
-		
+
 
 		break;
 
@@ -203,26 +279,110 @@ void spaciel(int key, int x, int y)
 void Keyboard (unsigned char key, int x, int y)
 {
 	switch (key) {
+	case 't':
+		printf("Changing to picking mode translation\n");
+		sceneMode = PICKING;
+		pickingMode = TRANSLATION;
+		break;
 
-	case ' ' :  
-		if (sceneMode == CAMERA)
+	case 'r':
+		sceneMode = PICKING;
+		pickingMode = ROTATION;
+		break;
+
+	case 's':
+		sceneMode = PICKING;
+		pickingMode = SCALE;
+		break;
+
+	case 'g' :  
 			sceneMode = GLOBAL;
-		else
+		break;
+	case 'c':
 			sceneMode = CAMERA;
-
+		break;
+	
 		cout << "The current mode:" << sceneMode << endl;;
 	}
 
 	glutPostRedisplay();
 }
 
+void processHits(GLint hits, GLuint *buffer)
+{
+	printf("\nbuffer\n");
+	float z1,z2;
+
+	for (GLint runner = 0; runner < hits*4; runner += 4)
+	{
+
+		z1=buffer[runner+1]/4294967295.0;
+		z2=buffer[runner+2]/4294967295.0;
+		printf("object number without filter: %d \n",buffer[runner+3]);
+
+		if((zValue[0]>=z1-0.0001 && zValue[0]<=z2+0.0001))
+		{	//try to locate which name is correlated with the pressed pixel according to z value 
+
+			printf("filtered: %d \n",buffer[runner+3]);
+			pickingArray[buffer[runner+3]] = !pickingArray[buffer[runner+3]] ;
+		}
+
+	}
+}
 
 void mouse(int button, int state, int x, int y) 
 {
 
-		xx=x;
-		yy=y;
-		mouseState = button;
+	if (button == GLUT_LEFT_BUTTON)
+	{
+		if (finishPicking)
+			memset((void*)pickingArray, 0, howManyObjects* sizeof(bool));
+		finishPicking = true;
+	}
+	if (button == GLUT_RIGHT_BUTTON)
+		finishPicking = false;
+
+	xx=x;
+	yy=y;
+	mouseState = button;
+	GLuint selectionBuf[bufSize];
+	GLint viewport[4];
+
+	memset((void*) selectionBuf, 0, sizeof(GLuint)*bufSize);
+
+	glGetIntegerv(GL_VIEWPORT,viewport); //reading viewport parameters
+	press=!press;
+
+	if(press)
+	{   //use selection mode to pick
+
+		glMatrixMode(GL_PROJECTION);
+
+		glReadPixels((GLdouble) x,(GLdouble) viewport[3]-y,2,2,GL_DEPTH_COMPONENT,GL_FLOAT,zValue);
+
+		glPushMatrix();	//saves current projection matrix
+
+		glLoadIdentity(); 
+		startPicking(selectionBuf); //preper selection mode
+
+		gluPickMatrix(x, (GLdouble) viewport[3] - y, 1, 1, viewport);
+	
+		GLUPERS;
+
+		glMatrixMode(GL_MODELVIEW); 
+
+		drawAll(GL_SELECT);
+
+		hits=glRenderMode(GL_RENDER); //gets hits number 
+
+		glMatrixMode(GL_PROJECTION);
+		glPopMatrix(); //restores projection matrix
+
+
+		glMatrixMode(GL_MODELVIEW);
+		processHits(hits,selectionBuf); //check hits
+	}
+
 }
 
 void display()
@@ -230,70 +390,39 @@ void display()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	glDisable(GL_NORMALIZE);
 	glMatrixMode(GL_MODELVIEW);
-		
+
 	glLoadIdentity();
-	
-	glMultMatrixf(rotateCamera);
+
+	glMultMatrixf(rotateCamera);	
 	glMultMatrixf(transCamera);
-	//glMultMatrixf(modelMatrix);
-	//glMultMatrixf(rotateModelMatrix);
+	glMultMatrixf(rotateGlobalMatrix);
+	glMultMatrixf(transGlobalMatrix);
 	//glScaled(scale, scale, scale);
 	//Draw_Axes();
-	for (GLuint runner = 0; runner < howManyObjects; runner++)
-	{
-		glPushMatrix();
-		
-		glMultMatrixf(objects[runner].rotation);
-		glMultMatrixf(objects[runner].trans);
-		std::vector<ReturnedFace*>* values = objects[runner].values;
-		for (std::vector<ReturnedFace*>::iterator it = values->begin(); it != values->end(); ++it)
-		{
-			GLuint runner;
-
-			glMaterialfv(GL_FRONT, GL_AMBIENT, Vector3f(0.3, 0.4, 0.5));
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, Vector3f(0.0, 0.6, 0.7));
-			glMaterialfv(GL_FRONT, GL_SPECULAR, Vector3f(0.0, 0.0, 0.8));
-
-			if ((*it)->count > 3)
-				glBegin(GL_POLYGON);
-			else		
-				glBegin(GL_TRIANGLES);
-
-			for (runner = 0; runner < (*it)->count; runner++)
-			{
-				glNormal3fv((GLfloat*)(*it)->normals[runner]);
-				glVertex3fv((GLfloat*)(*it)->vetexs[runner]);
-			}
-			glEnd();
-
-
-		glPopMatrix();
-		}
-			//Draw_Axes();
-
-}
+	drawAll(GL_RENDER);
 	glFlush();
 }
 
 
 void init()
 {
-	
+
 
 	glMatrixMode(GL_PROJECTION); /* switch matrix mode */
 	glLoadIdentity();		//load Identity matrix
 
 	//defines view mode
-	gluPerspective(60,1,2,200);
-	
+
+	GLUPERS;
 	glEnable(GL_DEPTH_TEST);  //define in which order the scene will built
 
 	/* return to modelview mode */
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	
+
 	glPushMatrix();
 	glTranslatef(0,0,-100);
+
 	glGetFloatv(GL_MODELVIEW_MATRIX, transCamera);
 	glPopMatrix();
 
@@ -312,7 +441,25 @@ void init()
 
 }
 
+void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
+{
+	
+	glMatrixMode(GL_MODELVIEW);
+	for (GLuint runner = 0; runner < howManyObjects; runner++)
+	{
+		if (pickingArray[runner])
+		{
 
+			glPushMatrix();
+			glLoadMatrixf(objects[runner].trans);
+			glTranslatef(moveX, moveY, 0 );
+			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].trans);
+			
+			glPopMatrix();
+		}
+	}
+
+}
 
 void motion(int x,int y)
 {
@@ -323,122 +470,136 @@ void motion(int x,int y)
 	xx = x;
 	yy = y;   
 
-switch (sceneMode){
+	switch (sceneMode){
 
-case  GLOBAL:
-			switch (mouseState){
+	case  GLOBAL:
+		switch (mouseState){
 
-			case GLUT_LEFT_BUTTON:
-	
-				glMatrixMode(GL_MODELVIEW);
+		case GLUT_LEFT_BUTTON:
 
-				glPushMatrix();		
-				glLoadMatrixf(rotateGlobalMatrix);
-				glRotatef( dy*180/m_viewport[3], 1 ,0,0 );
-				glRotatef( dx*180/m_viewport[2], 0 ,0,1 );
-		
-				glGetFloatv(GL_MODELVIEW_MATRIX, rotateGlobalMatrix);
-				glPopMatrix();
-	
-				disp();
-				break;
-	
+			glMatrixMode(GL_MODELVIEW);
 
+			glPushMatrix();		
+			glLoadMatrixf(rotateGlobalMatrix);
+			glRotatef( dy*180/m_viewport[3], rotateGlobalMatrix[1] ,rotateGlobalMatrix[5],rotateGlobalMatrix[9] );
 
-			case GLUT_MIDDLE_BUTTON:	
-				
-				glMatrixMode(GL_MODELVIEW);
-				glPushMatrix();		
-				glLoadMatrixf(transGlobalMatrix);
-				glTranslatef( 0 ,0,  dy*180/m_viewport[3] );
-	
-				glGetFloatv(GL_MODELVIEW_MATRIX, transGlobalMatrix);
-				glPopMatrix();
-	
-				disp();
-				break;
+			glLoadMatrixf(rotateGlobalMatrix);
+			glRotatef( dx*180/m_viewport[2], 0 ,0,1 );
 
-			case GLUT_RIGHT_BUTTON:	
-			
-				glMatrixMode(GL_MODELVIEW);
+			glGetFloatv(GL_MODELVIEW_MATRIX, rotateGlobalMatrix);
+			glPopMatrix();
 
-				glPushMatrix();		
-				glLoadMatrixf(rotateGlobalMatrix);
-				glTranslatef( 0,  dy*180/m_viewport[3], 0 );
-				glTranslatef( dx*180/m_viewport[2], 0,0 );
-
-		
-				glGetFloatv(GL_MODELVIEW_MATRIX, rotateGlobalMatrix);
-				glPopMatrix();
-	
-				disp();
-				break;
-			}
-break;
-
-case CAMERA:
-	switch (mouseState){
-		
-	case GLUT_LEFT_BUTTON:
-	
-				glMatrixMode(GL_MODELVIEW);
-				glPushMatrix();	
-				glLoadMatrixf(rotateCamera);
-			
-				
-				glRotated(dx*180/m_viewport[2],  rotateCamera[1],rotateCamera[5],rotateCamera[9]);
-				glGetFloatv(GL_MODELVIEW_MATRIX, rotateCamera);
-
-				glRotated(dy*180/m_viewport[3],  1,0, 0);
-
-				glGetFloatv(GL_MODELVIEW_MATRIX, rotateCamera);
+			disp();
+			break;
 
 
-				glPopMatrix();
-	
-				disp();
-				break;
-
-	case GLUT_RIGHT_BUTTON:	
-			
-				glMatrixMode(GL_MODELVIEW);
-
-				glPushMatrix();		
-				glLoadMatrixf(transCamera);
-				glTranslatef( 0,  dy*50/m_viewport[3], 0 );
-				glTranslatef( dx*50/m_viewport[2], 0,0 );
-
-		
-				glGetFloatv(GL_MODELVIEW_MATRIX, transCamera);
-				glPopMatrix();
-	
-				disp();
-				break;
 
 		case GLUT_MIDDLE_BUTTON:	
-							
+
+			glMatrixMode(GL_MODELVIEW);
+			glPushMatrix();		
+			glLoadMatrixf(transGlobalMatrix);
+			glTranslatef( 0 ,0,  dy*180/m_viewport[3] );
+
+			glGetFloatv(GL_MODELVIEW_MATRIX, transGlobalMatrix);
+			glPopMatrix();
+
+			disp();
+			break;
+
+		case GLUT_RIGHT_BUTTON:	
+
+			glMatrixMode(GL_MODELVIEW);
+
+			glPushMatrix();		
+			glLoadMatrixf(rotateGlobalMatrix);
+			glTranslatef( 0,  dy*180/m_viewport[3], 0 );
+			glTranslatef( dx*180/m_viewport[2], 0,0 );
+
+
+			glGetFloatv(GL_MODELVIEW_MATRIX, rotateGlobalMatrix);
+			glPopMatrix();
+
+			disp();
+			break;
+		}
+		break;
+
+	case CAMERA:
+		switch (mouseState){
+
+		case GLUT_LEFT_BUTTON:
+
+			glMatrixMode(GL_MODELVIEW);
+			glPushMatrix();	
+			glLoadMatrixf(rotateCamera);
+
+			glRotated(dx*180/m_viewport[2],  rotateCamera[1],rotateCamera[5],rotateCamera[9]);
+			glGetFloatv(GL_MODELVIEW_MATRIX, rotateCamera);
+
+			glRotated(dy*180/m_viewport[3],  1,0, 0);
+
+			glGetFloatv(GL_MODELVIEW_MATRIX, rotateCamera);
+
+
+			glPopMatrix();
+
+			disp();
+			break;
+
+		case GLUT_RIGHT_BUTTON:	
+
+			glMatrixMode(GL_MODELVIEW);
+
+			glPushMatrix();		
+			glLoadMatrixf(transCamera);
+			glTranslatef( 0,  dy*50/m_viewport[3], 0 );
+			glTranslatef( dx*50/m_viewport[2], 0,0 );
+
+
+			glGetFloatv(GL_MODELVIEW_MATRIX, transCamera);
+			glPopMatrix();
+
+			disp();
+			break;
+
+		case GLUT_MIDDLE_BUTTON:	
+
 			glMatrixMode(GL_MODELVIEW);
 
 			glPushMatrix();		
 			glLoadMatrixf(transCamera);
 			glTranslatef( 0,0,  -dy*50/m_viewport[3] );
-				
-		
+
+
 			glGetFloatv(GL_MODELVIEW_MATRIX, transCamera);
 			glPopMatrix();
-	
-				disp();
-				break;
 
+			disp();
+			break;
+
+		}
+
+		break;
+
+	case PICKING:
+
+		switch (pickingMode)
+		{
+			case TRANSLATION:
+				pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
+			break;
+
+			case SCALE:
+				pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
+
+			break;
+				
+		}
+	
+		break;
 	}
 
-			
-
-
-break;
-
-}
-	
 }
 
 void dispTimer(int value)
@@ -448,7 +609,7 @@ void dispTimer(int value)
 }
 int main(int  argc,  char** argv) 
 {
-
+	finishPicking = false;
 	vector<vector<Face*>*> fFaces;
 
 	Data ObjectsData;
@@ -456,7 +617,7 @@ int main(int  argc,  char** argv)
 		readFromFile(argv[1], ObjectsData, fFaces);
 	else
 		exit(1);
-	
+
 	objects = (CalObjects*) malloc(fFaces.size() * sizeof(CalObjects))   ;
 	howManyObjects = fFaces.size() ;
 	GLuint index = 0;
@@ -466,6 +627,10 @@ int main(int  argc,  char** argv)
 		objects[index].values = ObjectsData.paint(*it);
 		index ++ ;
 	}	
+
+	pickingArray = (bool*) malloc(sizeof(bool) * howManyObjects);
+
+	memset((void*) pickingArray, 0, sizeof(bool) * howManyObjects);
 
 	glutInit (& argc, argv) ;
 	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH) ;
@@ -484,8 +649,8 @@ int main(int  argc,  char** argv)
 	glutKeyboardFunc(Keyboard);
 	glutSpecialFunc(spaciel);
 	disp();
-	  
-	   glutTimerFunc(2,dispTimer,0);
+
+	glutTimerFunc(2,dispTimer,0);
 
 	glutMainLoop();
 
@@ -502,21 +667,21 @@ Face* parseFaces(char* buf)
 	char* rest = NULL;
 	int count  = 0;
 	do {
-		 if (count == 0)
+		if (count == 0)
 			group =  strtok(buf, SEP); // first token	
-		 else
+		else
 			group =  strtok(rest, SEP); // first token	
-	 
-			count++;
-			
-			rest = strtok(NULL, "");
-		
-			char* first = strtok(group,"//");
-			char* second = strtok(NULL,"");
-			
-			t1 = atof(first);
-			t2 = atof(++second);
-			face->pairs.push_back(new std::pair<GLfloat, GLfloat> (t1, t2));
+
+		count++;
+
+		rest = strtok(NULL, "");
+
+		char* first = strtok(group,"//");
+		char* second = strtok(NULL,"");
+
+		t1 = atof(first);
+		t2 = atof(++second);
+		face->pairs.push_back(new std::pair<GLfloat, GLfloat> (t1, t2));
 	}
 	while (rest);
 
