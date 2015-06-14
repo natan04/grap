@@ -53,6 +53,7 @@ Data* data ;
 
 typedef struct calculated_object
 {
+	Vector3f COM;
 	GLuint name;
 	std::vector<ReturnedFace*>* values;
 	GLfloat rotation[16];
@@ -74,13 +75,26 @@ void drawAll(GLenum mode) //draws square
 
 	for (GLuint runner = 0; runner < howManyObjects; runner++)
 	{
-		glPushMatrix();
+		
 
 		if(mode==GL_SELECT)
 			glLoadName( runner);
+		glPushMatrix();
+		glLoadIdentity();
 
-		glMultMatrixf(objects[runner].rotation);
+
+		glMultMatrixf(transGlobalMatrix);
 		glMultMatrixf(objects[runner].trans);
+		glMultMatrixf(rotateCamera);	
+		glMultMatrixf(transCamera);
+		
+		glMultMatrixf(rotateGlobalMatrix);
+	
+			glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
+		glMultMatrixf(objects[runner].rotation);
+		glTranslatef(-objects[runner].COM.x, -objects[runner].COM.y, -objects[runner].COM.z);
+
+		
 		std::vector<ReturnedFace*>* values = objects[runner].values;
 		for (std::vector<ReturnedFace*>::iterator it = values->begin(); it != values->end(); ++it)
 		{
@@ -286,11 +300,15 @@ void Keyboard (unsigned char key, int x, int y)
 		break;
 
 	case 'r':
+				
+		printf("Changing to picking mode rotation\n");
 		sceneMode = PICKING;
 		pickingMode = ROTATION;
 		break;
 
 	case 's':
+
+		printf("Changing to picking mode translatio\n");
 		sceneMode = PICKING;
 		pickingMode = SCALE;
 		break;
@@ -393,10 +411,7 @@ void display()
 
 	glLoadIdentity();
 
-	glMultMatrixf(rotateCamera);	
-	glMultMatrixf(transCamera);
-	glMultMatrixf(rotateGlobalMatrix);
-	glMultMatrixf(transGlobalMatrix);
+
 	//glScaled(scale, scale, scale);
 	//Draw_Axes();
 	drawAll(GL_RENDER);
@@ -441,6 +456,36 @@ void init()
 
 }
 
+
+void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
+{
+	
+	glMatrixMode(GL_MODELVIEW);
+	for (GLuint runner = 0; runner < howManyObjects; runner++)
+	{
+		if (pickingArray[runner])
+		{
+
+			glPushMatrix();
+			glLoadMatrixf(objects[runner].rotation);
+			
+
+			glRotated(moveX,  rotateCamera[1],rotateCamera[5],rotateCamera[9]);
+			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
+
+			glRotated(moveY,  1,0, 0);
+
+
+			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
+
+
+			glPopMatrix();
+		}
+	}
+
+}
+
+
 void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
 {
 	
@@ -481,9 +526,9 @@ void motion(int x,int y)
 
 			glPushMatrix();		
 			glLoadMatrixf(rotateGlobalMatrix);
-			glRotatef( dy*180/m_viewport[3], rotateGlobalMatrix[1] ,rotateGlobalMatrix[5],rotateGlobalMatrix[9] );
+			glRotatef( dy*180/m_viewport[3], rotateGlobalMatrix[0] ,rotateGlobalMatrix[4],rotateGlobalMatrix[8] );
 
-			glLoadMatrixf(rotateGlobalMatrix);
+			glGetFloatv(GL_MODELVIEW_MATRIX, rotateGlobalMatrix);
 			glRotatef( dx*180/m_viewport[2], 0 ,0,1 );
 
 			glGetFloatv(GL_MODELVIEW_MATRIX, rotateGlobalMatrix);
@@ -592,9 +637,12 @@ void motion(int x,int y)
 
 			case SCALE:
 				pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
-
 			break;
-				
+
+			case ROTATION:
+				pickMatrixsRotate(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
+			break;
+
 		}
 	
 		break;
@@ -606,6 +654,26 @@ void dispTimer(int value)
 {
 	glutPostRedisplay();
 	glutTimerFunc(1,dispTimer,0);
+}
+
+Vector3f getCOM(std::vector<ReturnedFace*>* v)
+{
+		Vector3f com; com.x = 0; com.y = 0; com.z = 0;
+		GLuint count = 0;
+		for (std::vector<ReturnedFace*>::iterator it = v->begin(); it != v->end(); ++it)
+		{
+	
+			for (GLuint runnerInside = 0; runnerInside < (*it)->count; runnerInside++)
+				{
+					count ++;
+					com += *(*it)->vetexs[runnerInside];
+				}
+			
+		}
+			
+		com /= count;
+		return com;
+	
 }
 int main(int  argc,  char** argv) 
 {
@@ -625,6 +693,7 @@ int main(int  argc,  char** argv)
 	{
 		objects[index].name = index;
 		objects[index].values = ObjectsData.paint(*it);
+		objects[index].COM = getCOM(objects[index].values);
 		index ++ ;
 	}	
 
@@ -634,7 +703,7 @@ int main(int  argc,  char** argv)
 
 	glutInit (& argc, argv) ;
 	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH) ;
-	glutInitWindowSize ( 500,500) ;
+	glutInitWindowSize ( 1024,768) ;
 	glutCreateWindow("Lighting") ;
 
 
