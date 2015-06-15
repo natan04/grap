@@ -15,10 +15,14 @@ float zValue[4];
 
 #define bufSize 512
 Face* parseFaces(char* buf);
-enum MODE {CAMERA, GLOBAL, PICKING	};
+void	alphaChangeAll(GLfloat p);
+enum MODE {CAMERA, GLOBAL, PICKING, ERASE	};
 MODE sceneMode;
 enum MODE_PICKING {TRANSLATION, ROTATION, SCALE	};
 MODE_PICKING pickingMode;
+
+GLuint lastPick = 2;
+bool bonus = 1; 
 
 GLfloat transCamera[16];
 GLfloat rotateCamera[16];
@@ -54,10 +58,15 @@ Data* data ;
 typedef struct calculated_object
 {
 	Vector3f COM;
+	Vector3f COMBonus;
+
+	GLfloat alpha;
 	GLuint name;
 	std::vector<ReturnedFace*>* values;
 	GLfloat rotation[16];
 	GLfloat trans[16];
+	GLfloat afterAll[16];
+
 } CalObjects;
 CalObjects* objects;
 
@@ -89,9 +98,12 @@ void drawAll(GLenum mode) //draws square
 		glMultMatrixf(transCamera);
 		
 		glMultMatrixf(rotateGlobalMatrix);
+		glMultMatrixf(objects[runner].afterAll);
 	
-			glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
+		glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
 		glMultMatrixf(objects[runner].rotation);
+	
+
 		glTranslatef(-objects[runner].COM.x, -objects[runner].COM.y, -objects[runner].COM.z);
 
 		
@@ -101,15 +113,13 @@ void drawAll(GLenum mode) //draws square
 	
 			if (pickingArray[runner])
 			{	
-				GLfloat mat_s[] = {1,0,0};
-				glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
-
+				//GLfloat mat_s[] = {1,0,0, objects[runner].alpha};
+				glColor4f(1,0,0,objects[runner].alpha	);
 			}
 			else{
-				glMaterialfv(GL_FRONT, GL_AMBIENT, Vector3f(0.3, 0.4, 0.5));
-				glMaterialfv(GL_FRONT, GL_DIFFUSE, Vector3f(0.0, 0.6, 0.7));
-				glMaterialfv(GL_FRONT, GL_SPECULAR, Vector3f(0.0, 0.0, 0.8));
-			}
+				glColor4f(0,0,0.4,objects[runner].alpha);
+
+			}	
 				if ((*it)->count > 3)
 					glBegin(GL_POLYGON);
 				else		
@@ -172,14 +182,16 @@ void initLight()
 	GLfloat mat_s[] = {0.0, 0.0, 0.4, 1.0};
 	GLfloat low_sh[] = {5.0};
 
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
+
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, low_sh);
 	glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
 
-	glEnable(GL_COLOR_MATERIAL);
 
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
+	glColorMaterial(GL_FRONT,  GL_EMISSION);	//must?
+	glEnable(GL_COLOR_MATERIAL);
 }
 
 void readFromFile(char* value, Data &objects, vector<vector<Face*>*>& faces)
@@ -306,6 +318,12 @@ void Keyboard (unsigned char key, int x, int y)
 		pickingMode = ROTATION;
 		break;
 
+	case 'e':
+		sceneMode = ERASE;
+		printf("Changing to erase mode\n");
+		
+		break;
+
 	case 's':
 
 		printf("Changing to picking mode translatio\n");
@@ -399,6 +417,9 @@ void mouse(int button, int state, int x, int y)
 
 		glMatrixMode(GL_MODELVIEW);
 		processHits(hits,selectionBuf); //check hits
+
+		if (sceneMode == ERASE)
+			alphaChangeAll(0);
 	}
 
 }
@@ -452,6 +473,8 @@ void init()
 	{
 		glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
 		glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].trans);
+		glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].afterAll);
+
 	}
 
 }
@@ -470,8 +493,8 @@ void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 			glLoadMatrixf(objects[runner].rotation);
 			
 
-			glRotated(moveX,  rotateCamera[1],rotateCamera[5],rotateCamera[9]);
-			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
+			glRotated(moveX,  objects[runner].rotation[1],objects[runner].rotation[5],objects[runner].rotation[9]);
+			glRotated(moveY,  1,0, 0);
 
 			glRotated(moveY,  1,0, 0);
 
@@ -480,6 +503,29 @@ void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 
 
 			glPopMatrix();
+
+
+			if (bonus)
+			{
+				float temp[16];
+				CalObjects* obj = &objects[lastPick];
+				glPushMatrix();
+				
+				glLoadMatrixf(objects[runner].afterAll);
+				glTranslated(+obj->COM.x, +obj->COM.y, +obj->COM.z);
+
+				glRotated(moveX,  temp[1],temp[5],temp[9]);			
+				glGetFloatv(GL_MODELVIEW_MATRIX, temp);
+				glRotated(moveY,  1,0, 0);
+			
+
+				glTranslated(-obj->COM.x, -obj->COM.y, -obj->COM.z);
+				glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].afterAll);
+
+				glPopMatrix();
+
+
+			}
 		}
 	}
 
@@ -498,9 +544,23 @@ void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
 			glPushMatrix();
 			glLoadMatrixf(objects[runner].trans);
 			glTranslatef(moveX, moveY, 0 );
+			objects[runner].COMBonus +=Vector3f(moveX, moveY,0);
 			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].trans);
 			
 			glPopMatrix();
+		}
+	}
+
+}
+
+void	alphaChangeAll(GLfloat p)
+{
+	
+	for (GLuint runner = 0; runner < howManyObjects; runner++)
+	{
+		if (pickingArray[runner])
+		{
+			objects[runner].alpha = p;	
 		}
 	}
 
@@ -646,6 +706,7 @@ void motion(int x,int y)
 		}
 	
 		break;
+
 	}
 
 }
@@ -694,6 +755,8 @@ int main(int  argc,  char** argv)
 		objects[index].name = index;
 		objects[index].values = ObjectsData.paint(*it);
 		objects[index].COM = getCOM(objects[index].values);
+		objects[index].COMBonus = getCOM(objects[index].values);
+		objects[index].alpha = 1;
 		index ++ ;
 	}	
 
@@ -702,7 +765,7 @@ int main(int  argc,  char** argv)
 	memset((void*) pickingArray, 0, sizeof(bool) * howManyObjects);
 
 	glutInit (& argc, argv) ;
-	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH) ;
+	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGBA | GLUT_DEPTH) ;
 	glutInitWindowSize ( 1024,768) ;
 	glutCreateWindow("Lighting") ;
 
@@ -713,7 +776,9 @@ int main(int  argc,  char** argv)
 	glutDisplayFunc(display); 
 	glutTimerFunc(2,disp,0);
 	glutMotionFunc(motion);
+	   glEnable (GL_BLEND);
 
+	glEnable(GL_ALPHA_TEST);	glAlphaFunc(GL_EQUAL, 1);
 	glutMouseFunc(mouse);
 	glutKeyboardFunc(Keyboard);
 	glutSpecialFunc(spaciel);
