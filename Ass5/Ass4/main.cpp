@@ -22,7 +22,11 @@ enum MODE_PICKING {TRANSLATION, ROTATION, SCALE	};
 MODE_PICKING pickingMode;
 
 GLuint lastPick = 2;
-bool bonus = 1; 
+bool bonus = 0; 
+bool bonusBlur = 0; 
+
+#define NUMBER_FRAME_BLUR 30
+GLint currentFrameBlur = 0;
 
 GLfloat transCamera[16];
 GLfloat rotateCamera[16];
@@ -40,7 +44,7 @@ GLfloat rotRight;
 int xM,yM;
 int xx,yy,ii,jj;
 float zz;
-
+void	loadObject(GLuint index);
 float w, h, tip = 0, turn = 0;
 
 float ORG[3] = {0,0,0};
@@ -60,12 +64,10 @@ typedef struct calculated_object
 	Vector3f COM;
 	Vector3f COMBonus;
 
-	GLfloat alpha;
 	GLuint name;
 	std::vector<ReturnedFace*>* values;
 	GLfloat rotation[16];
 	GLfloat trans[16];
-	GLfloat afterAll[16];
 
 } CalObjects;
 CalObjects* objects;
@@ -74,57 +76,76 @@ GLuint howManyObjects ;
 
 void paintSphere()
 {
-	GLUquadricObj*  Sphere=gluNewQuadric();
-   gluSphere(Sphere,0.3,1,1);
-	
+
+	glDepthFunc(GL_ALWAYS);  
+	glColor4f(1,0,0,1);
+
+	glutSolidSphere(0.3, 20.0, 20.0);
+
+	glColor4f(0,0,0.4,1);
+
+	glDepthFunc(GL_LESS);  
+}
+void accumThis()
+{
+	if(currentFrameBlur == 0)
+    glAccum(GL_LOAD, 1.0 / NUMBER_FRAME_BLUR);
+  else
+    glAccum(GL_ACCUM, 1.0 / NUMBER_FRAME_BLUR);
+ 
+  currentFrameBlur++;
+ 
+  if(currentFrameBlur >= NUMBER_FRAME_BLUR) {
+    currentFrameBlur = 0;
+    glAccum(GL_RETURN, 1.0);
 }
 
+}
 void drawAll(GLenum mode) //draws square
+
 {
-
-	for (GLuint runner = 0; runner < howManyObjects; runner++)
-	{
-		
-
-		if(mode==GL_SELECT)
-			glLoadName( runner);
-		glPushMatrix();
 		glLoadIdentity();
-
-
 		glMultMatrixf(transGlobalMatrix);
-		glMultMatrixf(objects[runner].trans);
 		glMultMatrixf(rotateCamera);	
 		glMultMatrixf(transCamera);
 		
 		glMultMatrixf(rotateGlobalMatrix);
-		glMultMatrixf(objects[runner].afterAll);
-	
-		glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
-		glMultMatrixf(objects[runner].rotation);
-	
-
-		glTranslatef(-objects[runner].COM.x, -objects[runner].COM.y, -objects[runner].COM.z);
-
+				
+	for (GLuint runner = 0; runner < howManyObjects; runner++)
+	{
 		
+	
+		glPushMatrix();
+
+
+			if(mode==GL_SELECT)
+			{
+				glLoadName( runner);
+			}
+
+	
+		loadObject(runner);
+
+		GLuint count = 0;
 		std::vector<ReturnedFace*>* values = objects[runner].values;
 		for (std::vector<ReturnedFace*>::iterator it = values->begin(); it != values->end(); ++it)
 		{
 	
-			if (pickingArray[runner])
-			{	
-				//GLfloat mat_s[] = {1,0,0, objects[runner].alpha};
-				glColor4f(1,0,0,objects[runner].alpha	);
-			}
-			else{
-				glColor4f(0,0,0.4,objects[runner].alpha);
 
-			}	
+			if(mode==GL_SELECT)
+			{
+				glPushName(count++);	
+			}
+
+			glColor4f(0,0,0.4,(*it)->alpha);
+			
+
 				if ((*it)->count > 3)
 					glBegin(GL_POLYGON);
-				else		
+				else
 					glBegin(GL_TRIANGLES);	
 
+		
 				for (GLuint runnerInside = 0; runnerInside < (*it)->count; runnerInside++)
 				{
 					glNormal3fv((GLfloat*)(*it)->normals[runnerInside]);
@@ -132,16 +153,24 @@ void drawAll(GLenum mode) //draws square
 				}
 				glEnd();
 
-				
+					
+			if(mode==GL_SELECT)
+				glPopName(); 
 			
 		}
 			
-			GLfloat mat_s[] = {0.0, 0.0, 0.4, 1.0};
-			glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
-
-
-		glPopMatrix();
 		
+
+		glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
+		if (pickingArray[runner])
+			paintSphere();
+		glTranslatef(-objects[runner].COM.x, -objects[runner].COM.y, -objects[runner].COM.z);
+
+		glPopMatrix();	
+	}
+	if(mode==GL_RENDER && bonusBlur)
+	{		glAccum(GL_MULT, 0.40) ;		glAccum(GL_ACCUM, 0.6);		glAccum(GL_RETURN, 1.0) ;
+			
 	}
 }
 
@@ -187,6 +216,7 @@ void initLight()
 
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, low_sh);
 	glMaterialfv(GL_FRONT, GL_EMISSION, mat_s);
+
 
 
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
@@ -349,18 +379,33 @@ void processHits(GLint hits, GLuint *buffer)
 	printf("\nbuffer\n");
 	float z1,z2;
 
-	for (GLint runner = 0; runner < hits*4; runner += 4)
+	for (GLint runner = 0; runner < hits*5; runner += 5)
 	{
 
 		z1=buffer[runner+1]/4294967295.0;
 		z2=buffer[runner+2]/4294967295.0;
-		printf("object number without filter: %d \n",buffer[runner+3]);
+		printf("object number without filter first:: %d \n",buffer[runner+3]);
+
+		printf("object number without filter second:: %d \n",buffer[runner+4]);
+
 
 		if((zValue[0]>=z1-0.0001 && zValue[0]<=z2+0.0001))
 		{	//try to locate which name is correlated with the pressed pixel according to z value 
 
+			GLuint numberObj = buffer[runner+3];
+
+				if (sceneMode == ERASE)
+				{
+				GLuint numberPolygon = buffer[runner+4];
+	 
+					std::vector<ReturnedFace*>* valeVect = objects[numberObj].values;
+
+					ReturnedFace* face = valeVect->at(numberPolygon);
+					face->alpha = 0;
+				}
+
 			printf("filtered: %d \n",buffer[runner+3]);
-			pickingArray[buffer[runner+3]] = !pickingArray[buffer[runner+3]] ;
+			pickingArray[numberObj] = !pickingArray[numberObj] ;
 		}
 
 	}
@@ -406,7 +451,7 @@ void mouse(int button, int state, int x, int y)
 		GLUPERS;
 
 		glMatrixMode(GL_MODELVIEW); 
-
+		
 		drawAll(GL_SELECT);
 
 		hits=glRenderMode(GL_RENDER); //gets hits number 
@@ -418,15 +463,15 @@ void mouse(int button, int state, int x, int y)
 		glMatrixMode(GL_MODELVIEW);
 		processHits(hits,selectionBuf); //check hits
 
-		if (sceneMode == ERASE)
-			alphaChangeAll(0);
 	}
 
 }
 
 void display()
 {
+	glDrawBuffer(GL_BACK);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+	 glReadBuffer(GL_BACK);
 	glDisable(GL_NORMALIZE);
 	glMatrixMode(GL_MODELVIEW);
 
@@ -436,7 +481,8 @@ void display()
 	//glScaled(scale, scale, scale);
 	//Draw_Axes();
 	drawAll(GL_RENDER);
-	glFlush();
+	//glFlush();
+	glutSwapBuffers(); 
 }
 
 
@@ -456,6 +502,8 @@ void init()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	glClear(GL_ACCUM_BUFFER_BIT);
+
 	glPushMatrix();
 	glTranslatef(0,0,-100);
 
@@ -473,12 +521,31 @@ void init()
 	{
 		glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
 		glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].trans);
-		glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].afterAll);
 
 	}
 
 }
 
+void transpose(GLfloat* mat1)
+{
+	GLfloat temp[16];
+	memcpy(temp, mat1, 16*sizeof(GLfloat));
+	int i, j;
+	
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			mat1[j*4 + i] = temp[i*4 + j];
+
+}
+
+void	loadObject(GLuint index)
+{
+				glMultMatrixf(objects[index].trans);
+				glTranslatef(objects[index].COM.x, objects[index].COM.y, objects[index].COM.z);
+				glMultMatrixf(objects[index].rotation);	
+				glTranslatef(-objects[index].COM.x, -objects[index].COM.y, -objects[index].COM.z);
+
+}
 
 void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 {
@@ -489,42 +556,56 @@ void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 		if (pickingArray[runner])
 		{
 
+			
+
+			if (bonus)
+			{
+
+				GLfloat afterAll[16];
+				CalObjects* obj = &objects[lastPick];
+				GLfloat temp[16];
+				GLfloat moveBack[16];
+
+								
+				glPushMatrix();
+				glLoadIdentity();
+
+
+			//	glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
+			//	glRotatef(moveX, 0, 1, 0);
+			//	glTranslatef(-objects[runner].COM.x, -objects[runner].COM.y, -objects[runner].COM.z);
+
+
+				glTranslatef(obj->COM.x, obj->COM.y, obj->COM.z);
+				glRotated(moveX,  0,1,0);
+				glTranslatef(-obj->COM.x, -obj->COM.y, -obj->COM.z);
+
+
+				glGetFloatv(GL_MODELVIEW_MATRIX, temp);
+
+				glPopMatrix();
+
+		
+				objects[runner].trans[12] += temp[12];
+				objects[runner].trans[13] += temp[13];
+				objects[runner].trans[14] += temp[14];
+
+				//memcpy(&objects[runner].trans[0xc], &temp[0xc], sizeof(GLfloat)*3);
+				memcpy(&objects[runner].rotation[0], &temp[0], sizeof(GLfloat)*12);
+
+			} else
+			{
+				printf("object number:%d inside rotation normal\n", runner);
 			glPushMatrix();
 			glLoadMatrixf(objects[runner].rotation);
 			
-
-			glRotated(moveX,  objects[runner].rotation[1],objects[runner].rotation[5],objects[runner].rotation[9]);
-			glRotated(moveY,  1,0, 0);
-
-			glRotated(moveY,  1,0, 0);
-
-
+			glRotated(moveX,  0,1,0);
+			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
+			glRotated(moveY,  objects[runner].rotation[0],objects[runner].rotation[4],objects[runner].rotation[8]);
 			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
 
 
 			glPopMatrix();
-
-
-			if (bonus)
-			{
-				float temp[16];
-				CalObjects* obj = &objects[lastPick];
-				glPushMatrix();
-				
-				glLoadMatrixf(objects[runner].afterAll);
-				glTranslated(+obj->COM.x, +obj->COM.y, +obj->COM.z);
-
-				glRotated(moveX,  temp[1],temp[5],temp[9]);			
-				glGetFloatv(GL_MODELVIEW_MATRIX, temp);
-				glRotated(moveY,  1,0, 0);
-			
-
-				glTranslated(-obj->COM.x, -obj->COM.y, -obj->COM.z);
-				glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].afterAll);
-
-				glPopMatrix();
-
-
 			}
 		}
 	}
@@ -553,18 +634,6 @@ void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
 
 }
 
-void	alphaChangeAll(GLfloat p)
-{
-	
-	for (GLuint runner = 0; runner < howManyObjects; runner++)
-	{
-		if (pickingArray[runner])
-		{
-			objects[runner].alpha = p;	
-		}
-	}
-
-}
 
 void motion(int x,int y)
 {
@@ -756,7 +825,6 @@ int main(int  argc,  char** argv)
 		objects[index].values = ObjectsData.paint(*it);
 		objects[index].COM = getCOM(objects[index].values);
 		objects[index].COMBonus = getCOM(objects[index].values);
-		objects[index].alpha = 1;
 		index ++ ;
 	}	
 
@@ -765,20 +833,22 @@ int main(int  argc,  char** argv)
 	memset((void*) pickingArray, 0, sizeof(bool) * howManyObjects);
 
 	glutInit (& argc, argv) ;
-	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGBA | GLUT_DEPTH) ;
-	glutInitWindowSize ( 1024,768) ;
-	glutCreateWindow("Lighting") ;
+	glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH  | GLUT_ACCUM) ;
+	glutInitWindowSize ( 500,500) ;
+	glutCreateWindow("Picking") ;
 
 
 	init();
+		
 
 	initLight();
 	glutDisplayFunc(display); 
 	glutTimerFunc(2,disp,0);
 	glutMotionFunc(motion);
-	   glEnable (GL_BLEND);
+	glEnable (GL_BLEND);
 
-	glEnable(GL_ALPHA_TEST);	glAlphaFunc(GL_EQUAL, 1);
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_EQUAL, 1);
 	glutMouseFunc(mouse);
 	glutKeyboardFunc(Keyboard);
 	glutSpecialFunc(spaciel);

@@ -91,7 +91,7 @@ ReturnedFace* Data::getInfoFromFace(Face* face)
 	
 	}
 	faceInfo->count = face->count;
-
+	faceInfo->alpha  = 1;
 	return faceInfo;
 }
 

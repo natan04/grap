@@ -16,6 +16,7 @@ typedef struct returned_face
 	vector<Normal*> normals;
 	vector<Vertex*> vetexs;
 	GLuint count;
+	GLfloat alpha;
 } ReturnedFace;
 
 typedef struct struct_faces
