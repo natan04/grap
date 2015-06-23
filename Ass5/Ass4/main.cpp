@@ -22,10 +22,10 @@ enum MODE_PICKING {TRANSLATION, ROTATION, SCALE	};
 MODE_PICKING pickingMode;
 
 GLuint lastPick = 2;
-bool bonus = 0; 
+bool bonus = 1; 
 bool bonusBlur = 0; 
 
-#define NUMBER_FRAME_BLUR 30
+#define NUMBER_FRAME_BLUR 2
 GLint currentFrameBlur = 0;
 
 GLfloat transCamera[16];
@@ -91,7 +91,7 @@ void accumThis()
 	if(currentFrameBlur == 0)
     glAccum(GL_LOAD, 1.0 / NUMBER_FRAME_BLUR);
   else
-    glAccum(GL_ACCUM, 1.0 / NUMBER_FRAME_BLUR);
+    glAccum(GL_MULT, 1.0 / NUMBER_FRAME_BLUR);
  
   currentFrameBlur++;
  
@@ -169,8 +169,11 @@ void drawAll(GLenum mode) //draws square
 		glPopMatrix();	
 	}
 	if(mode==GL_RENDER && bonusBlur)
-	{		glAccum(GL_MULT, 0.40) ;		glAccum(GL_ACCUM, 0.6);		glAccum(GL_RETURN, 1.0) ;
-			
+	{
+			
+		glAccum(GL_MULT, 0.80) ;
+		glAccum(GL_ACCUM, 0.20);
+		glAccum(GL_RETURN, 1.0) ;
 	}
 }
 
@@ -470,7 +473,7 @@ void mouse(int button, int state, int x, int y)
 void display()
 {
 	glDrawBuffer(GL_BACK);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );	
 	 glReadBuffer(GL_BACK);
 	glDisable(GL_NORMALIZE);
 	glMatrixMode(GL_MODELVIEW);
@@ -526,6 +529,20 @@ void init()
 
 }
 
+
+void multiply(GLfloat* mat1, GLfloat* vect)
+{
+	GLfloat back[4]; memset(back, 0, 4 * sizeof(GLfloat));
+	int i,j;
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			back[i] += mat1[i*4 + j]* vect[j];
+
+	vect[0] = back[0];vect[1] = back[1];vect[2] = back[2];
+
+
+
+}
 void transpose(GLfloat* mat1)
 {
 	GLfloat temp[16];
@@ -541,15 +558,39 @@ void transpose(GLfloat* mat1)
 void	loadObject(GLuint index)
 {
 				glMultMatrixf(objects[index].trans);
-				glTranslatef(objects[index].COM.x, objects[index].COM.y, objects[index].COM.z);
 				glMultMatrixf(objects[index].rotation);	
-				glTranslatef(-objects[index].COM.x, -objects[index].COM.y, -objects[index].COM.z);
+				//glTranslatef(objects[index].COM.x, objects[index].COM.y, objects[index].COM.z);
+				//glTranslatef(-objects[index].COM.x, -objects[index].COM.y, -objects[index].COM.z);
 
 }
 
+void 	getRotationPart(GLfloat* rotateMatrix)
+{
+		GLfloat r[16];
+		memcpy(rotateMatrix, r, 16*sizeof(GLfloat));
+		glPushMatrix();
+		glLoadIdentity();
+		glGetFloatv(GL_MODELVIEW_MATRIX, rotateMatrix);
+		for (int i = 0; i < 3; i ++)
+			for (int j = 0; j < 3; j ++)
+				rotateMatrix[i*4 + j] = r[i*4 + j];
+		glPopMatrix();
+
+}
+
+void 	getTranslatePart(GLfloat* rotateMatrix)
+{
+		GLfloat r[16];
+		memcpy(rotateMatrix, r, 16*sizeof(GLfloat));
+		rotateMatrix[12] = r[12];
+		rotateMatrix[13] = r[13];
+		rotateMatrix[14] = r[14];
+
+}
 void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 {
 	
+	printf("%f\n", moveX);
 	glMatrixMode(GL_MODELVIEW);
 	for (GLuint runner = 0; runner < howManyObjects; runner++)
 	{
@@ -557,55 +598,72 @@ void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 		{
 
 			
-
 			if (bonus)
 			{
 
 				GLfloat afterAll[16];
 				CalObjects* obj = &objects[lastPick];
+				GLfloat tempTra[16];
+				GLfloat tempRot[16];
 				GLfloat temp[16];
+
 				GLfloat moveBack[16];
+				GLfloat rotateMatrix[16];
+				GLfloat radius[3];
+				GLfloat newRadius[3];
 
 								
 				glPushMatrix();
 				glLoadIdentity();
-
-
-			//	glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
-			//	glRotatef(moveX, 0, 1, 0);
-			//	glTranslatef(-objects[runner].COM.x, -objects[runner].COM.y, -objects[runner].COM.z);
-
-
-				glTranslatef(obj->COM.x, obj->COM.y, obj->COM.z);
+				glTranslatef(obj->COMBonus.x, obj->COMBonus.y, obj->COMBonus.z);
+					
 				glRotated(moveX,  0,1,0);
-				glTranslatef(-obj->COM.x, -obj->COM.y, -obj->COM.z);
-
-
 				glGetFloatv(GL_MODELVIEW_MATRIX, temp);
+				glRotated(moveY,  temp[0],temp[4],temp[8]);
+			
+				glTranslatef(-obj->COMBonus.x, -obj->COMBonus.y, -obj->COMBonus.z);
+				glGetFloatv(GL_MODELVIEW_MATRIX, tempTra);
+				glGetFloatv(GL_MODELVIEW_MATRIX, tempRot);
 
 				glPopMatrix();
+				
 
 		
-				objects[runner].trans[12] += temp[12];
-				objects[runner].trans[13] += temp[13];
-				objects[runner].trans[14] += temp[14];
+				glPushMatrix();
+				memset(&tempRot[12], 0, 3* sizeof(GLfloat));
+				glLoadIdentity();
+				glMultMatrixf(tempRot);
+				glMultMatrixf(objects[runner].rotation);
+				glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
+				glPopMatrix();
 
-				//memcpy(&objects[runner].trans[0xc], &temp[0xc], sizeof(GLfloat)*3);
-				memcpy(&objects[runner].rotation[0], &temp[0], sizeof(GLfloat)*12);
+				glPushMatrix();
+				glLoadIdentity();
+				glTranslatef(tempTra[12], tempTra[13], tempTra[14]);
+				glMultMatrixf(tempRot);
+				glMultMatrixf(objects[runner].trans);
+				glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].trans);
+				memset(&objects[runner].trans[0], 0, 12 * sizeof(GLfloat));
+				objects[runner].trans[0] = 1; objects[runner].trans[5] = 1; objects[runner].trans[10] = 1;
+				//glMultMatrixf(temp);
+				
+				glPopMatrix();
+
 
 			} else
 			{
-				printf("object number:%d inside rotation normal\n", runner);
-			glPushMatrix();
-			glLoadMatrixf(objects[runner].rotation);
 			
-			glRotated(moveX,  0,1,0);
-			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
-			glRotated(moveY,  objects[runner].rotation[0],objects[runner].rotation[4],objects[runner].rotation[8]);
-			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
+				printf("object number:%d inside rotation normal\n", runner);
+				glPushMatrix();
+				glLoadMatrixf(objects[runner].rotation);
+			
+				glRotated(moveX,  0,1,0);
+				glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
+				glRotated(moveY,  objects[runner].rotation[0],objects[runner].rotation[4],objects[runner].rotation[8]);
+				glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
 
 
-			glPopMatrix();
+				glPopMatrix();
 			}
 		}
 	}
@@ -834,7 +892,7 @@ int main(int  argc,  char** argv)
 
 	glutInit (& argc, argv) ;
 	glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH  | GLUT_ACCUM) ;
-	glutInitWindowSize ( 500,500) ;
+	glutInitWindowSize ( 1000,1000) ;
 	glutCreateWindow("Picking") ;
 
 
@@ -854,7 +912,7 @@ int main(int  argc,  char** argv)
 	glutSpecialFunc(spaciel);
 	disp();
 
-	glutTimerFunc(2,dispTimer,0);
+	glutTimerFunc(10,dispTimer,0);
 
 	glutMainLoop();
 
