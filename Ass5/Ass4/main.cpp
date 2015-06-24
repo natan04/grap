@@ -101,10 +101,43 @@ void accumThis()
 	}
 
 }
+
+
+void Draw_Axes (void)
+{
+
+	glDepthFunc(GL_ALWAYS);  
+
+	glPushMatrix ();
+//	glPushAttrib(GL_CURRENT_BIT);
+	glMatrixMode(GL_MODELVIEW);
+
+	glBegin (GL_LINES);
+	glColor3f (1,0,0); // X axis is red.
+	glVertex3f (0,0,0);
+	glVertex3f (100,0,0); 
+	glBegin (GL_LINES);
+	glColor3f (0,0,1); // Y axis is green.
+	glVertex3f (0,0,0);
+	glVertex3f (0,100,0);
+	glBegin (GL_LINES);
+	glColor3f (0,1,0); // z axis is blue.
+	glVertex3f (0,0,0);
+	glVertex3f (0,0,-100);
+	glEnd();
+
+	//glPopAttrib();
+	glDepthFunc(GL_LESS); 
+	glPopMatrix ();
+}
+
+
 void drawAll(GLenum mode) //draws square
 
 {
 	glLoadIdentity();
+	if(mode==GL_RENDER)
+		Draw_Axes();
 	glMultMatrixf(transGlobalMatrix);
 	glMultMatrixf(rotateCamera);	
 	glMultMatrixf(transCamera);
@@ -161,7 +194,12 @@ void drawAll(GLenum mode) //draws square
 			paintSphere();
 
 		glPopMatrix();	
+			Draw_Axes();
+
 	}
+	
+	
+	
 	if(mode==GL_RENDER && bonusBlur)
 	{
 
@@ -257,30 +295,6 @@ void readFromFile(char* value, Data &objects, vector<vector<Face*>*>& faces)
 		memset(&buf, 0, MAX_CHARS_PER_LINE);
 	}
 	fin.close();
-}
-
-void Draw_Axes (void)
-{
-	glPushMatrix ();
-	glPushAttrib(GL_CURRENT_BIT);
-	glMatrixMode(GL_MODELVIEW);
-
-	glBegin (GL_LINES);
-	glColor3f (1,0,0); // X axis is red.
-	glVertex3f (0,0,0);
-	glVertex3f (100,0,0); 
-	glBegin (GL_LINES);
-	glColor3f (0,0,1); // Y axis is green.
-	glVertex3f (0,0,0);
-	glVertex3f (0,100,0);
-	glBegin (GL_LINES);
-	glColor3f (0,1,0); // z axis is blue.
-	glVertex3f (0,0,0);
-	glVertex3f (0,0,-100);
-	glEnd();
-
-	glPopAttrib();
-	glPopMatrix ();
 }
 
 void disp(int value)
@@ -840,6 +854,8 @@ void motion(int x,int y)
 		GLfloat toPass;
 	case PICKING:
 
+		if (!finishPicking)
+			return;
 		switch (pickingMode)
 		{
 		case TRANSLATION:
