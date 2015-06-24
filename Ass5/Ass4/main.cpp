@@ -11,7 +11,6 @@ float zValue[4];
 
 #define stringify( name ) # name
 #define MAX_CHARS_PER_LINE 500
-#define GLUPERS 	gluPerspective(60,1,2,200);
 
 #define bufSize 512
 Face* parseFaces(char* buf);
@@ -21,7 +20,7 @@ MODE sceneMode;
 enum MODE_PICKING {TRANSLATION, ROTATION, SCALE	};
 MODE_PICKING pickingMode;
 
-GLuint lastPick = 2;
+GLuint lastPick = -1;
 bool bonus = 1; 
 bool bonusBlur = 0; 
 
@@ -39,6 +38,7 @@ bool press;
 GLint hits;
 int mouseState;
 GLfloat angle = 60;
+#define GLUPERS 	gluPerspective(angle,1,2,200);
 GLuint rotUp = 0;
 GLfloat rotRight;    
 int xM,yM;
@@ -62,13 +62,13 @@ Data* data ;
 typedef struct calculated_object
 {
 	Vector3f COM;
-	Vector3f COMBonus;
+	Vector3f COMState;
 
 	GLuint name;
 	std::vector<ReturnedFace*>* values;
 	GLfloat rotation[16];
 	GLfloat trans[16];
-
+	GLfloat scale;
 } CalObjects;
 CalObjects* objects;
 
@@ -89,48 +89,43 @@ void paintSphere()
 void accumThis()
 {
 	if(currentFrameBlur == 0)
-    glAccum(GL_LOAD, 1.0 / NUMBER_FRAME_BLUR);
-  else
-    glAccum(GL_MULT, 1.0 / NUMBER_FRAME_BLUR);
- 
-  currentFrameBlur++;
- 
-  if(currentFrameBlur >= NUMBER_FRAME_BLUR) {
-    currentFrameBlur = 0;
-    glAccum(GL_RETURN, 1.0);
-}
+		glAccum(GL_LOAD, 1.0 / NUMBER_FRAME_BLUR);
+	else
+		glAccum(GL_MULT, 1.0 / NUMBER_FRAME_BLUR);
+
+	currentFrameBlur++;
+
+	if(currentFrameBlur >= NUMBER_FRAME_BLUR) {
+		currentFrameBlur = 0;
+		glAccum(GL_RETURN, 1.0);
+	}
 
 }
 void drawAll(GLenum mode) //draws square
 
 {
-		glLoadIdentity();
-		glMultMatrixf(transGlobalMatrix);
-		glMultMatrixf(rotateCamera);	
-		glMultMatrixf(transCamera);
-		
-		glMultMatrixf(rotateGlobalMatrix);
-				
+	glLoadIdentity();
+	glMultMatrixf(transGlobalMatrix);
+	glMultMatrixf(rotateCamera);	
+	glMultMatrixf(transCamera);
+
+	glMultMatrixf(rotateGlobalMatrix);
+	glScalef(scale, scale, scale);		
 	for (GLuint runner = 0; runner < howManyObjects; runner++)
 	{
-		
-	
+
 		glPushMatrix();
 
+		if(mode==GL_SELECT)
+			glLoadName( runner);
 
-			if(mode==GL_SELECT)
-			{
-				glLoadName( runner);
-			}
-
-	
 		loadObject(runner);
 
 		GLuint count = 0;
 		std::vector<ReturnedFace*>* values = objects[runner].values;
 		for (std::vector<ReturnedFace*>::iterator it = values->begin(); it != values->end(); ++it)
 		{
-	
+
 
 			if(mode==GL_SELECT)
 			{
@@ -138,39 +133,38 @@ void drawAll(GLenum mode) //draws square
 			}
 
 			glColor4f(0,0,0.4,(*it)->alpha);
-			
 
-				if ((*it)->count > 3)
-					glBegin(GL_POLYGON);
-				else
-					glBegin(GL_TRIANGLES);	
 
-		
-				for (GLuint runnerInside = 0; runnerInside < (*it)->count; runnerInside++)
-				{
-					glNormal3fv((GLfloat*)(*it)->normals[runnerInside]);
-					glVertex3fv((GLfloat*)(*it)->vetexs[runnerInside]);
-				}
-				glEnd();
+			if ((*it)->count > 3)
+				glBegin(GL_POLYGON);
+			else
+				glBegin(GL_TRIANGLES);	
 
-					
+
+			for (GLuint runnerInside = 0; runnerInside < (*it)->count; runnerInside++)
+			{
+				glNormal3fv((GLfloat*)(*it)->normals[runnerInside]);
+				glVertex3fv((GLfloat*)(*it)->vetexs[runnerInside]);
+			}
+			glEnd();
+
+
 			if(mode==GL_SELECT)
 				glPopName(); 
-			
-		}
-			
-		
 
-		glTranslatef(objects[runner].COM.x, objects[runner].COM.y, objects[runner].COM.z);
+		}
+
+
+
+		glTranslatef(objects[runner].COMState.x, objects[runner].COMState.y, objects[runner].COMState.z);
 		if (pickingArray[runner])
 			paintSphere();
-		glTranslatef(-objects[runner].COM.x, -objects[runner].COM.y, -objects[runner].COM.z);
 
 		glPopMatrix();	
 	}
 	if(mode==GL_RENDER && bonusBlur)
 	{
-			
+
 		glAccum(GL_MULT, 0.80) ;
 		glAccum(GL_ACCUM, 0.20);
 		glAccum(GL_RETURN, 1.0) ;
@@ -208,7 +202,7 @@ void initLight()
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
-
+	glEnable(GL_NORMALIZE);
 	GLfloat mat_a[] = {0.4, 0.4, 0.5, 1.0};
 	GLfloat mat_d[] = {0.0, 0.6, 0.7, 1.0};
 	GLfloat mat_s[] = {0.0, 0.0, 0.4, 1.0};
@@ -345,7 +339,7 @@ void Keyboard (unsigned char key, int x, int y)
 		break;
 
 	case 'r':
-				
+
 		printf("Changing to picking mode rotation\n");
 		sceneMode = PICKING;
 		pickingMode = ROTATION;
@@ -354,23 +348,27 @@ void Keyboard (unsigned char key, int x, int y)
 	case 'e':
 		sceneMode = ERASE;
 		printf("Changing to erase mode\n");
-		
+
 		break;
 
 	case 's':
 
-		printf("Changing to picking mode translatio\n");
+		printf("Changing to picking mode scale\n");
 		sceneMode = PICKING;
 		pickingMode = SCALE;
 		break;
 
 	case 'g' :  
-			sceneMode = GLOBAL;
+		sceneMode = GLOBAL;
+		printf("Changing to picking mode global\n");
+
 		break;
 	case 'c':
-			sceneMode = CAMERA;
+
+		sceneMode = CAMERA;
+		printf("Changing to picking mode camera\n");
 		break;
-	
+
 		cout << "The current mode:" << sceneMode << endl;;
 	}
 
@@ -397,17 +395,19 @@ void processHits(GLint hits, GLuint *buffer)
 
 			GLuint numberObj = buffer[runner+3];
 
-				if (sceneMode == ERASE)
-				{
+			if (sceneMode == ERASE)
+			{
 				GLuint numberPolygon = buffer[runner+4];
-	 
-					std::vector<ReturnedFace*>* valeVect = objects[numberObj].values;
 
-					ReturnedFace* face = valeVect->at(numberPolygon);
-					face->alpha = 0;
-				}
+				std::vector<ReturnedFace*>* valeVect = objects[numberObj].values;
+
+				ReturnedFace* face = valeVect->at(numberPolygon);
+				face->alpha = 0;
+			}
 
 			printf("filtered: %d \n",buffer[runner+3]);
+			if (finishPicking)
+				lastPick = numberObj; 
 			pickingArray[numberObj] = !pickingArray[numberObj] ;
 		}
 
@@ -419,6 +419,7 @@ void mouse(int button, int state, int x, int y)
 
 	if (button == GLUT_LEFT_BUTTON)
 	{
+
 		if (finishPicking)
 			memset((void*)pickingArray, 0, howManyObjects* sizeof(bool));
 		finishPicking = true;
@@ -450,11 +451,11 @@ void mouse(int button, int state, int x, int y)
 		startPicking(selectionBuf); //preper selection mode
 
 		gluPickMatrix(x, (GLdouble) viewport[3] - y, 1, 1, viewport);
-	
+
 		GLUPERS;
 
 		glMatrixMode(GL_MODELVIEW); 
-		
+
 		drawAll(GL_SELECT);
 
 		hits=glRenderMode(GL_RENDER); //gets hits number 
@@ -474,7 +475,7 @@ void display()
 {
 	glDrawBuffer(GL_BACK);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );	
-	 glReadBuffer(GL_BACK);
+	glReadBuffer(GL_BACK);
 	glDisable(GL_NORMALIZE);
 	glMatrixMode(GL_MODELVIEW);
 
@@ -529,26 +530,36 @@ void init()
 
 }
 
-
-void multiply(GLfloat* mat1, GLfloat* vect)
+//new location will be in Com
+void updateNewLocationCom(GLint index)
 {
-	GLfloat back[4]; memset(back, 0, 4 * sizeof(GLfloat));
-	int i,j;
-	for (i = 0; i < 4; i++)
-		for (j = 0; j < 4; j++)
-			back[i] += mat1[i*4 + j]* vect[j];
 
-	vect[0] = back[0];vect[1] = back[1];vect[2] = back[2];
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	loadObject(index);
+
+	Vector3f newCom;
+	GLfloat mat[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, mat);
+	glPopMatrix();
+
+	Vector3f* com = &objects[index].COMState;
+	newCom[0] = mat[0] * com->x + mat[4] * com->y + mat[8] * com->z + mat[12];
+	newCom[1] = mat[1] * com->x + mat[5] * com->y + mat[9] * com->z + mat[13];
+	newCom[2] = mat[2] * com->x + mat[6] * com->y + mat[10] * com->z + mat[14];
 
 
+	objects[index].COM = newCom;
 
+	return;
 }
 void transpose(GLfloat* mat1)
 {
 	GLfloat temp[16];
 	memcpy(temp, mat1, 16*sizeof(GLfloat));
 	int i, j;
-	
+
 	for (i = 0; i < 4; i++)
 		for (j = 0; j < 4; j++)
 			mat1[j*4 + i] = temp[i*4 + j];
@@ -557,39 +568,40 @@ void transpose(GLfloat* mat1)
 
 void	loadObject(GLuint index)
 {
-				glMultMatrixf(objects[index].trans);
-				glMultMatrixf(objects[index].rotation);	
-				//glTranslatef(objects[index].COM.x, objects[index].COM.y, objects[index].COM.z);
-				//glTranslatef(-objects[index].COM.x, -objects[index].COM.y, -objects[index].COM.z);
+	glMultMatrixf(objects[index].trans);
+	glMultMatrixf(objects[index].rotation);
 
+	glTranslated(objects[index].COMState.x, objects[index].COMState.y, objects[index].COMState.z);
+	glScalef(objects[index].scale, objects[index].scale, objects[index].scale);
+	glTranslated(-objects[index].COMState.x, -objects[index].COMState.y, -objects[index].COMState.z);
 }
 
 void 	getRotationPart(GLfloat* rotateMatrix)
 {
-		GLfloat r[16];
-		memcpy(rotateMatrix, r, 16*sizeof(GLfloat));
-		glPushMatrix();
-		glLoadIdentity();
-		glGetFloatv(GL_MODELVIEW_MATRIX, rotateMatrix);
-		for (int i = 0; i < 3; i ++)
-			for (int j = 0; j < 3; j ++)
-				rotateMatrix[i*4 + j] = r[i*4 + j];
-		glPopMatrix();
+	GLfloat r[16];
+	memcpy(rotateMatrix, r, 16*sizeof(GLfloat));
+	glPushMatrix();
+	glLoadIdentity();
+	glGetFloatv(GL_MODELVIEW_MATRIX, rotateMatrix);
+	for (int i = 0; i < 3; i ++)
+		for (int j = 0; j < 3; j ++)
+			rotateMatrix[i*4 + j] = r[i*4 + j];
+	glPopMatrix();
 
 }
 
 void 	getTranslatePart(GLfloat* rotateMatrix)
 {
-		GLfloat r[16];
-		memcpy(rotateMatrix, r, 16*sizeof(GLfloat));
-		rotateMatrix[12] = r[12];
-		rotateMatrix[13] = r[13];
-		rotateMatrix[14] = r[14];
+	GLfloat r[16];
+	memcpy(rotateMatrix, r, 16*sizeof(GLfloat));
+	rotateMatrix[12] = r[12];
+	rotateMatrix[13] = r[13];
+	rotateMatrix[14] = r[14];
 
 }
 void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 {
-	
+
 	printf("%f\n", moveX);
 	glMatrixMode(GL_MODELVIEW);
 	for (GLuint runner = 0; runner < howManyObjects; runner++)
@@ -597,38 +609,32 @@ void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 		if (pickingArray[runner])
 		{
 
-			
+
 			if (bonus)
 			{
 
-				GLfloat afterAll[16];
 				CalObjects* obj = &objects[lastPick];
 				GLfloat tempTra[16];
 				GLfloat tempRot[16];
 				GLfloat temp[16];
 
-				GLfloat moveBack[16];
-				GLfloat rotateMatrix[16];
-				GLfloat radius[3];
-				GLfloat newRadius[3];
 
-								
 				glPushMatrix();
 				glLoadIdentity();
-				glTranslatef(obj->COMBonus.x, obj->COMBonus.y, obj->COMBonus.z);
-					
+				glTranslatef(obj->COM.x, obj->COM.y, obj->COM.z);
+
 				glRotated(moveX,  0,1,0);
 				glGetFloatv(GL_MODELVIEW_MATRIX, temp);
 				glRotated(moveY,  temp[0],temp[4],temp[8]);
-			
-				glTranslatef(-obj->COMBonus.x, -obj->COMBonus.y, -obj->COMBonus.z);
+
+				glTranslatef(-obj->COM.x, -obj->COM.y, -obj->COM.z);
 				glGetFloatv(GL_MODELVIEW_MATRIX, tempTra);
 				glGetFloatv(GL_MODELVIEW_MATRIX, tempRot);
 
 				glPopMatrix();
-				
 
-		
+
+
 				glPushMatrix();
 				memset(&tempRot[12], 0, 3* sizeof(GLfloat));
 				glLoadIdentity();
@@ -646,17 +652,18 @@ void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 				memset(&objects[runner].trans[0], 0, 12 * sizeof(GLfloat));
 				objects[runner].trans[0] = 1; objects[runner].trans[5] = 1; objects[runner].trans[10] = 1;
 				//glMultMatrixf(temp);
-				
+
 				glPopMatrix();
 
+				updateNewLocationCom(runner);
 
 			} else
 			{
-			
+
 				printf("object number:%d inside rotation normal\n", runner);
 				glPushMatrix();
 				glLoadMatrixf(objects[runner].rotation);
-			
+
 				glRotated(moveX,  0,1,0);
 				glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].rotation);
 				glRotated(moveY,  objects[runner].rotation[0],objects[runner].rotation[4],objects[runner].rotation[8]);
@@ -671,9 +678,27 @@ void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 }
 
 
+
+void	pickMatrixsScale(GLfloat moveX, GLfloat moveY)
+{
+
+	glMatrixMode(GL_MODELVIEW);
+	for (GLuint runner = 0; runner < howManyObjects; runner++)
+	{
+		if (pickingArray[runner])
+		{
+
+			objects[runner].scale *= moveX;
+
+
+		}
+	}
+
+}
+
 void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
 {
-	
+
 	glMatrixMode(GL_MODELVIEW);
 	for (GLuint runner = 0; runner < howManyObjects; runner++)
 	{
@@ -682,10 +707,9 @@ void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
 
 			glPushMatrix();
 			glLoadMatrixf(objects[runner].trans);
-			glTranslatef(moveX, moveY, 0 );
-			objects[runner].COMBonus +=Vector3f(moveX, moveY,0);
+			glTranslatef(moveX, moveY,	0 );
 			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].trans);
-			
+
 			glPopMatrix();
 		}
 	}
@@ -697,8 +721,8 @@ void motion(int x,int y)
 {
 	GLint m_viewport[4];
 	glGetIntegerv( GL_VIEWPORT, m_viewport );
-	int dy = y - yy;
-	int dx = -x + xx;
+	int dy = -(y - yy);
+	int dx = -( -x + xx);
 	xx = x;
 	yy = y;   
 
@@ -813,25 +837,27 @@ void motion(int x,int y)
 		}
 
 		break;
-
+		GLfloat toPass;
 	case PICKING:
 
 		switch (pickingMode)
 		{
-			case TRANSLATION:
-				pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
+		case TRANSLATION:
+			pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
 			break;
 
-			case SCALE:
-				pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
+		case SCALE:
+
+		 toPass = ((GLfloat)dx)*1/m_viewport[2];
+			pickMatrixsScale(toPass + 1,  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
 			break;
 
-			case ROTATION:
-				pickMatrixsRotate(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
+		case ROTATION:
+			pickMatrixsRotate(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
 			break;
 
 		}
-	
+
 		break;
 
 	}
@@ -846,22 +872,22 @@ void dispTimer(int value)
 
 Vector3f getCOM(std::vector<ReturnedFace*>* v)
 {
-		Vector3f com; com.x = 0; com.y = 0; com.z = 0;
-		GLuint count = 0;
-		for (std::vector<ReturnedFace*>::iterator it = v->begin(); it != v->end(); ++it)
+	Vector3f com; com.x = 0; com.y = 0; com.z = 0;
+	GLuint count = 0;
+	for (std::vector<ReturnedFace*>::iterator it = v->begin(); it != v->end(); ++it)
+	{
+
+		for (GLuint runnerInside = 0; runnerInside < (*it)->count; runnerInside++)
 		{
-	
-			for (GLuint runnerInside = 0; runnerInside < (*it)->count; runnerInside++)
-				{
-					count ++;
-					com += *(*it)->vetexs[runnerInside];
-				}
-			
+			count ++;
+			com += *(*it)->vetexs[runnerInside];
 		}
-			
-		com /= count;
-		return com;
-	
+
+	}
+
+	com /= count;
+	return com;
+
 }
 int main(int  argc,  char** argv) 
 {
@@ -882,7 +908,9 @@ int main(int  argc,  char** argv)
 		objects[index].name = index;
 		objects[index].values = ObjectsData.paint(*it);
 		objects[index].COM = getCOM(objects[index].values);
-		objects[index].COMBonus = getCOM(objects[index].values);
+		objects[index].COMState = getCOM(objects[index].values);
+		objects[index].scale = 1;
+
 		index ++ ;
 	}	
 
@@ -897,7 +925,7 @@ int main(int  argc,  char** argv)
 
 
 	init();
-		
+
 
 	initLight();
 	glutDisplayFunc(display); 
