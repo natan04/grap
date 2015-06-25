@@ -26,7 +26,8 @@ bool bonusBlur = 0;
 
 #define NUMBER_FRAME_BLUR 2
 GLint currentFrameBlur = 0;
-
+void Draw_Axes (void);
+bool play = 0;
 GLfloat transCamera[16];
 GLfloat rotateCamera[16];
 GLfloat rotateGlobalMatrix[16];
@@ -106,28 +107,30 @@ void accumThis()
 void Draw_Axes (void)
 {
 
-	glDepthFunc(GL_ALWAYS);  
 
 	glPushMatrix ();
-//	glPushAttrib(GL_CURRENT_BIT);
+	//glDepthFunc(GL_ALWAYS);  
+	glPushAttrib(GL_CURRENT_BIT);
 	glMatrixMode(GL_MODELVIEW);
 
 	glBegin (GL_LINES);
-	glColor3f (1,0,0); // X axis is red.
+	glColor4f (1.0,0,0, 1); // X axis is red.
 	glVertex3f (0,0,0);
 	glVertex3f (100,0,0); 
+	glEnd();
 	glBegin (GL_LINES);
-	glColor3f (0,0,1); // Y axis is green.
+	glColor4f (0,0,1.0, 1); // Y axis is green.
 	glVertex3f (0,0,0);
 	glVertex3f (0,100,0);
+	glEnd();
 	glBegin (GL_LINES);
-	glColor3f (0,1,0); // z axis is blue.
+	glColor4f (0,1,0, 1); // z axis is blue.
 	glVertex3f (0,0,0);
 	glVertex3f (0,0,-100);
 	glEnd();
 
-	//glPopAttrib();
-	glDepthFunc(GL_LESS); 
+	glPopAttrib();
+	//glDepthFunc(GL_LESS); 
 	glPopMatrix ();
 }
 
@@ -135,15 +138,17 @@ void Draw_Axes (void)
 void drawAll(GLenum mode) //draws square
 
 {
+	
+	glPushMatrix();
 	glLoadIdentity();
-	if(mode==GL_RENDER)
-		Draw_Axes();
-	glMultMatrixf(transGlobalMatrix);
 	glMultMatrixf(rotateCamera);	
 	glMultMatrixf(transCamera);
 
+	glMultMatrixf(transGlobalMatrix);
 	glMultMatrixf(rotateGlobalMatrix);
 	glScalef(scale, scale, scale);		
+	
+
 	for (GLuint runner = 0; runner < howManyObjects; runner++)
 	{
 
@@ -165,7 +170,7 @@ void drawAll(GLenum mode) //draws square
 				glPushName(count++);	
 			}
 
-			glColor4f(0,0,0.4,(*it)->alpha);
+			glColor4f(0,0,0.8,(*it)->alpha);
 
 
 			if ((*it)->count > 3)
@@ -187,14 +192,11 @@ void drawAll(GLenum mode) //draws square
 
 		}
 
-
-
 		glTranslatef(objects[runner].COMState.x, objects[runner].COMState.y, objects[runner].COMState.z);
 		if (pickingArray[runner])
 			paintSphere();
 
 		glPopMatrix();	
-			Draw_Axes();
 
 	}
 	
@@ -202,11 +204,18 @@ void drawAll(GLenum mode) //draws square
 	
 	if(mode==GL_RENDER && bonusBlur)
 	{
-
 		glAccum(GL_MULT, 0.80) ;
 		glAccum(GL_ACCUM, 0.20);
 		glAccum(GL_RETURN, 1.0) ;
 	}
+
+	if(mode==GL_RENDER)
+			Draw_Axes();
+	glPopMatrix();
+
+	
+//if(mode==GL_RENDER)
+
 }
 
 void startPicking(GLuint *selectionBuf)
@@ -241,9 +250,9 @@ void initLight()
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_NORMALIZE);
-	GLfloat mat_a[] = {0.4, 0.4, 0.5, 1.0};
+	GLfloat mat_a[] = {0.3, 0.4, 0.5, 1.0};
 	GLfloat mat_d[] = {0.0, 0.6, 0.7, 1.0};
-	GLfloat mat_s[] = {0.0, 0.0, 0.4, 1.0};
+	GLfloat mat_s[] = {0.0, 0.0, 0.8, 1.0};
 	GLfloat low_sh[] = {5.0};
 
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
@@ -377,6 +386,14 @@ void Keyboard (unsigned char key, int x, int y)
 		printf("Changing to picking mode global\n");
 
 		break;
+
+	case 'p' :  
+		
+		play = !play;
+
+				printf("play\n");
+
+		break;
 	case 'c':
 
 		sceneMode = CAMERA;
@@ -404,7 +421,7 @@ void processHits(GLint hits, GLuint *buffer)
 		printf("object number without filter second:: %d \n",buffer[runner+4]);
 
 
-		if((zValue[0]>=z1-0.0001 && zValue[0]<=z2+0.0001))
+		if((zValue[0]>=z1-0.0001 && zValue[0]<=z2+0.0001 || (zValue[0]>=z1-0.0001 && zValue[0]<=z2+0.0001)))
 		{	//try to locate which name is correlated with the pressed pixel according to z value 
 
 			GLuint numberObj = buffer[runner+3];
@@ -430,13 +447,19 @@ void processHits(GLint hits, GLuint *buffer)
 
 void mouse(int button, int state, int x, int y) 
 {
+		press=!press;
+
 
 	if (button == GLUT_LEFT_BUTTON)
 	{
 
 		if (finishPicking)
+		{
 			memset((void*)pickingArray, 0, howManyObjects* sizeof(bool));
-		finishPicking = true;
+			finishPicking = false;
+		}
+		else
+			finishPicking = true;
 	}
 	if (button == GLUT_RIGHT_BUTTON)
 		finishPicking = false;
@@ -450,8 +473,6 @@ void mouse(int button, int state, int x, int y)
 	memset((void*) selectionBuf, 0, sizeof(GLuint)*bufSize);
 
 	glGetIntegerv(GL_VIEWPORT,viewport); //reading viewport parameters
-	press=!press;
-
 	if(press)
 	{   //use selection mode to pick
 
@@ -495,8 +516,6 @@ void display()
 
 	glLoadIdentity();
 
-
-	//glScaled(scale, scale, scale);
 	//Draw_Axes();
 	drawAll(GL_RENDER);
 	//glFlush();
@@ -616,7 +635,6 @@ void 	getTranslatePart(GLfloat* rotateMatrix)
 void	pickMatrixsRotate(GLfloat moveX, GLfloat moveY)
 {
 
-	printf("%f\n", moveX);
 	glMatrixMode(GL_MODELVIEW);
 	for (GLuint runner = 0; runner < howManyObjects; runner++)
 	{
@@ -710,7 +728,7 @@ void	pickMatrixsScale(GLfloat moveX, GLfloat moveY)
 
 }
 
-void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
+void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY, bool zAxis)
 {
 
 	glMatrixMode(GL_MODELVIEW);
@@ -721,7 +739,11 @@ void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
 
 			glPushMatrix();
 			glLoadMatrixf(objects[runner].trans);
-			glTranslatef(moveX, moveY,	0 );
+			if (zAxis)
+				glTranslatef(0,0,	moveY );
+			else
+				glTranslatef(moveX, moveY,	0 );
+	
 			glGetFloatv(GL_MODELVIEW_MATRIX, objects[runner].trans);
 
 			glPopMatrix();
@@ -733,6 +755,7 @@ void	pickMatrixsTrans(GLfloat moveX, GLfloat moveY)
 
 void motion(int x,int y)
 {
+	bool zAxis;
 	GLint m_viewport[4];
 	glGetIntegerv( GL_VIEWPORT, m_viewport );
 	int dy = -(y - yy);
@@ -744,7 +767,7 @@ void motion(int x,int y)
 
 	case  GLOBAL:
 		switch (mouseState){
-
+			
 		case GLUT_LEFT_BUTTON:
 
 			glMatrixMode(GL_MODELVIEW);
@@ -859,7 +882,10 @@ void motion(int x,int y)
 		switch (pickingMode)
 		{
 		case TRANSLATION:
-			pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3]); //TODO: check if need to sub (view port - y)
+			 zAxis = false; 
+			if (mouseState == GLUT_MIDDLE_BUTTON) 
+				zAxis = true;
+			pickMatrixsTrans(dx*180/m_viewport[2],  dy*180/m_viewport[3], zAxis); //TODO: check if need to sub (view port - y)
 			break;
 
 		case SCALE:
@@ -879,9 +905,28 @@ void motion(int x,int y)
 	}
 
 }
+void playFunction()
+{
+	memset(pickingArray, 0 , sizeof(bool) * (howManyObjects  ));
+	pickingArray[lastPick] = 1;
+	GLfloat howMuch =	(((GLfloat)rand()) / RAND_MAX)/10 ;
+	for (unsigned int i = 0 ; i < howManyObjects; i ++)
+	{
+		if (i == lastPick)
+			continue;
+		pickingArray[i] = !pickingArray[i]; 
+		pickMatrixsRotate(howMuch * (i+1),howMuch );
+		pickingArray[i] = !pickingArray[i]; 
+	
+	}
+
+}
+
 
 void dispTimer(int value)
 {
+	if (play)
+		playFunction();
 	glutPostRedisplay();
 	glutTimerFunc(1,dispTimer,0);
 }
@@ -905,6 +950,10 @@ Vector3f getCOM(std::vector<ReturnedFace*>* v)
 	return com;
 
 }
+
+
+
+
 int main(int  argc,  char** argv) 
 {
 	finishPicking = false;
